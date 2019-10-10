@@ -160,7 +160,7 @@ PDs_diss = os.path.join(ng911_db, 'NG911_law_bound_PDs_diss')
 PDs_join = os.path.join(ng911_db, 'NG911_law_bound_PDs_join')
 arcpy.management.Dissolve(PDs_temp, PDs_diss, "Agency_ID")
 # Add back in all fields via spatial join
-arcpy.analysis.SpatialJoin(PDs_diss, PDs_temp, PDs_join, "JOIN_ONE_TO_ONE", "KEEP_ALL")
+arcpy.analysis.SpatialJoin(PDs_diss, PDs_temp, PDs_join, "JOIN_ONE_TO_ONE", "KEEP_ALL", "", "HAVE_THEIR_CENTER_IN")
 
 # Build Lone Peak & North Park jurisdictions
 print("Building boundaries for PDs that cover multiple municipalities ...")
@@ -234,7 +234,7 @@ combos_diss = os.path.join(ng911_db, 'NG911_law_bound_combos_diss')
 combos_join = os.path.join(ng911_db, 'NG911_law_bound_combos_join')
 arcpy.management.Dissolve(combos_temp, combos_diss, "Agency_ID")
 # Add back in all fields via spatial join
-arcpy.analysis.SpatialJoin(combos_diss, combos_temp, combos_join, "JOIN_ONE_TO_ONE", "KEEP_ALL")
+arcpy.analysis.SpatialJoin(combos_diss, combos_temp, combos_join, "JOIN_ONE_TO_ONE", "KEEP_ALL", "", "HAVE_THEIR_CENTER_IN")
 
 # Append combo jurisdictions into PDs layer
 print("Adding combo jurisdictions into PDs layer ...")
