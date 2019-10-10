@@ -4,7 +4,6 @@ Created on Tue Oct 8 13:20:42 2019
 @author: eneemann
 Script to build NG911 law enforecement boundaries from SGID data
 
-
 """
 
 import arcpy
@@ -39,6 +38,7 @@ law_schema = os.path.join(ng911_db, 'NG911_Law_schema')
 law_working = os.path.join(ng911_db, 'NG911_Law_bound_working_' + today)
 
 # Read in text file of municipalities with PDs
+print("Reading in text file to get Municipalities with Police Departments ...")
 textfile_dir = r'C:\Users\eneemann\Desktop\Neemann\NG911\NG911_project'
 filename = os.path.join(textfile_dir, 'Munis_with_PDs.txt')
 with open(filename, 'r') as filehandle:
@@ -51,20 +51,12 @@ for item in muni_pd_temp:
         muni_pd.append(item)
 print(muni_pd)
 
-
-
-## Add field to working FC for notes
-#arcpy.AddField_management(working_addpts, "Notes", "TEXT", "", "", 50)
-#arcpy.AddField_management(working_addpts, "Street", "TEXT", "", "", 50)
-
 ##################
 # Basic Workflow #
 ##################
 
 # Build Sheriff's Office boundaries from county boundaries (law_SOs_temp)
-# Copy schema to new feature class
-
-#arcpy.management.CopyFeatures(law_schema, law_working)
+print("Building Sheriff's Office boundaries from counties ...")
 SOs_temp = os.path.join(ng911_db, 'NG911_law_bound_SOs_temp')
 arcpy.management.CopyFeatures(law_schema, SOs_temp)
 if arcpy.Exists("working_lyr"):
@@ -113,7 +105,7 @@ print("Total count of updates is: {}".format(update_count))
 
 # Drop in other jurisdictions
 # Build Muncipality PD boundaries (law_PDs_temp)
-
+print("Building Police Department boundaries from Municipalities ...")
 PDs_temp = os.path.join(ng911_db, 'NG911_law_bound_PDs_temp')
 arcpy.management.CopyFeatures(law_schema, PDs_temp)
 if arcpy.Exists("working_lyr_2"):
@@ -163,15 +155,15 @@ with arcpy.da.UpdateCursor("working_lyr_2", fields) as update_cursor:
 print("Total count of updates is: {}".format(update_count))
 
 # Dissolve jurisdictions with multiple polygons (Draper, Park City, Santaquin)
+print("Dissolving jurisdictions that cross county boundaries ...")
 PDs_diss = os.path.join(ng911_db, 'NG911_law_bound_PDs_diss')
 PDs_join = os.path.join(ng911_db, 'NG911_law_bound_PDs_join')
 arcpy.management.Dissolve(PDs_temp, PDs_diss, "Agency_ID")
-
+# Add back in all fields via spatial join
 arcpy.analysis.SpatialJoin(PDs_diss, PDs_temp, PDs_join, "JOIN_ONE_TO_ONE", "KEEP_ALL")
 
-
-
 # Build Lone Peak & North Park jurisdictions
+print("Building boundaries for PDs that cover multiple municipalities ...")
 combos_temp = os.path.join(ng911_db, 'NG911_law_bound_combos_temp')
 arcpy.management.CopyFeatures(law_schema, combos_temp)
 if arcpy.Exists("working_lyr_3"):
@@ -237,30 +229,30 @@ with arcpy.da.UpdateCursor("working_lyr_3", fields, query2) as update_cursor:
         update_cursor.updateRow(row)
 print("Total count of updates is: {}".format(update_count))
 
-
 # Dissolve jurisdictions with multiple polygons (Lone Peak, North Park)
 combos_diss = os.path.join(ng911_db, 'NG911_law_bound_combos_diss')
 combos_join = os.path.join(ng911_db, 'NG911_law_bound_combos_join')
 arcpy.management.Dissolve(combos_temp, combos_diss, "Agency_ID")
-
+# Add back in all fields via spatial join
 arcpy.analysis.SpatialJoin(combos_diss, combos_temp, combos_join, "JOIN_ONE_TO_ONE", "KEEP_ALL")
 
 # Append combo jurisdictions into PDs layer
+print("Adding combo jurisdictions into PDs layer ...")
 arcpy.management.Append(combos_join, PDs_join, "NO_TEST")
 
 # Drop police departments into sheriffs offices via erase/append
+print("Inserting PD boundaries into Sheriff's Office boundaries ...")
 # Erase
 SOs_holes = os.path.join(ng911_db, 'NG911_law_bound_SOs_holes')
 arcpy.analysis.Erase(SOs_temp, PDs_join, SOs_holes)
-
 # Append
 arcpy.management.Append(PDs_join, SOs_holes, "NO_TEST")
 
 # Drop in unique districts via erase/append (law_unique_temp) - tribal, Navajo Nation, etc.
+print("Adding unique districts into SOs/PDs layer ...")
 # Erase
 law_final = os.path.join(ng911_db, 'NG911_law_bound_final')
 arcpy.analysis.Erase(SOs_holes, unique, law_final)
-
 # Append
 arcpy.management.Append(unique, law_final, "NO_TEST")
 
@@ -281,15 +273,13 @@ print("Total count of updates is: {}".format(update_count))
 
 
 # Project final data to WGS84
+print("Projecting final law boundaries into WGS84 ...")
 law_wgs84 = os.path.join(ng911_db, 'NG911_law_bound_final_WGS84')
 sr = arcpy.SpatialReference("WGS 1984")
 arcpy.management.Project(law_final, law_wgs84, sr, "WGS_1984_(ITRF00)_To_NAD_1983")
 
-
 # Drop in UHP boundaries - buffer state/federal highways (10-30m)
 # Only use buffers outside of municipalities?
-
-
 
 ###############
 #  Functions  #
@@ -302,13 +292,9 @@ arcpy.management.Project(law_final, law_wgs84, sr, "WGS_1984_(ITRF00)_To_NAD_198
 #add_unified_pd()
 #add_unique_pds()
 
-
-
 ##########################
 #  Call Functions Below  #
 ##########################
-
-
 
 print("Script shutting down ...")
 # Stop timer and print end time in UTC
