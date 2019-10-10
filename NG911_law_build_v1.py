@@ -26,6 +26,7 @@ ng911_db = r"C:\Users\eneemann\Desktop\Neemann\NG911\NG911_project\NG911_project
 
 arcpy.env.workspace = ng911_db
 arcpy.env.overwriteOutput = True
+arcpy.env.qualifiedFieldNames = False
 
 today = time.strftime("%Y%m%d")
 
@@ -137,6 +138,7 @@ fms.addFieldMap(fm_agency)
 
 # Complete the append with field mapping
 arcpy.management.Append("muni_lyr", "working_lyr_2", "NO_TEST", field_mapping=fms)
+# now munis are in law schema with only Agency_ID and DsplayName populated (sk_lyr_2, PDs_temp)
 
 # Populate fields with information
 update_count = 0
@@ -159,8 +161,18 @@ print("Dissolving jurisdictions that cross county boundaries ...")
 PDs_diss = os.path.join(ng911_db, 'NG911_law_bound_PDs_diss')
 PDs_join = os.path.join(ng911_db, 'NG911_law_bound_PDs_join')
 arcpy.management.Dissolve(PDs_temp, PDs_diss, "Agency_ID")
+
+# Attempt with attribute join
+arcpy.management.CopyFeatures(PDs_diss, PDs_join)
+fields_list = ['Source', 'DateUpdate', 'Effective', 'Expire', 'ES_NGUID', 'State',
+               'ServiceURI', 'ServiceURN', 'ServiceNum', 'AVcard_URI', 'DsplayName']
+print(fields_list)
+arcpy.management.JoinField(PDs_join, "Agency_ID", PDs_temp, "Agency_ID", fields_list)
+
+
+
 # Add back in all fields via spatial join
-arcpy.analysis.SpatialJoin(PDs_diss, PDs_temp, PDs_join, "JOIN_ONE_TO_ONE", "KEEP_ALL", "", "HAVE_THEIR_CENTER_IN")
+#arcpy.analysis.SpatialJoin(PDs_diss, PDs_temp, PDs_join, "JOIN_ONE_TO_ONE", "KEEP_ALL", "", "CLOSEST")
 
 # Build Lone Peak & North Park jurisdictions
 print("Building boundaries for PDs that cover multiple municipalities ...")
@@ -233,8 +245,18 @@ print("Total count of updates is: {}".format(update_count))
 combos_diss = os.path.join(ng911_db, 'NG911_law_bound_combos_diss')
 combos_join = os.path.join(ng911_db, 'NG911_law_bound_combos_join')
 arcpy.management.Dissolve(combos_temp, combos_diss, "Agency_ID")
+
+# Attempt with attribute join
+arcpy.management.CopyFeatures(combos_diss, combos_join)
+arcpy.management.JoinField(combos_join, "Agency_ID", combos_temp, "Agency_ID", fields_list)
+
 # Add back in all fields via spatial join
-arcpy.analysis.SpatialJoin(combos_diss, combos_temp, combos_join, "JOIN_ONE_TO_ONE", "KEEP_ALL", "", "HAVE_THEIR_CENTER_IN")
+#arcpy.analysis.SpatialJoin(combos_diss, combos_temp, combos_join, "JOIN_ONE_TO_ONE", "KEEP_ALL", "", "CLOSEST")
+# "HAVE_THEIR_CENTER_IN" - Hildale and Kanab centers don't work
+# "INTERSECT" - Utah County cities get screwed up
+# "ARE_IDENTICAL_TO" - Several issues - combo jurisdictions and cross counties
+# "CONTAINS" - Tremonton doesn't work (two polygons?)
+# "CONTAINS_CLEMENTINI" - Tremonton doesn't work (two polygons?)
 
 # Append combo jurisdictions into PDs layer
 print("Adding combo jurisdictions into PDs layer ...")
