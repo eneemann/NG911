@@ -169,8 +169,6 @@ fields_list = ['Source', 'DateUpdate', 'Effective', 'Expire', 'ES_NGUID', 'State
 print(fields_list)
 arcpy.management.JoinField(PDs_join, "Agency_ID", PDs_temp, "Agency_ID", fields_list)
 
-
-
 # Add back in all fields via spatial join
 #arcpy.analysis.SpatialJoin(PDs_diss, PDs_temp, PDs_join, "JOIN_ONE_TO_ONE", "KEEP_ALL", "", "CLOSEST")
 
