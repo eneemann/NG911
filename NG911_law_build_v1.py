@@ -179,7 +179,7 @@ arcpy.management.CopyFeatures(law_schema, combos_temp)
 if arcpy.Exists("working_lyr_3"):
     arcpy.management.Delete("working_lyr_3")
 arcpy.management.MakeFeatureLayer(combos_temp, "working_lyr_3")
-query = "NAME IN ('Alpine', 'Highland', 'North Logan', 'Hyde Park')"
+query = "NAME IN ('Alpine', 'Highland', 'North Logan', 'Hyde Park', 'Santaquin', 'Genola', 'Parowan', 'Paragonah', 'Santa Clara', 'Ivins')"
 print(query)
 arcpy.management.MakeFeatureLayer(munis, "muni_lyr_3", query)
 
@@ -206,42 +206,79 @@ fms.addFieldMap(fm_agency)
 arcpy.management.Append("muni_lyr_3", "working_lyr_3", "NO_TEST", field_mapping=fms)
 
 # Populate fields with information and rename to combo jurisdiction (Lone Peak)
-update_count = 0
 #            0           1           2          3            4
 fields = ['Source', 'DateUpdate', 'State', 'Agency_ID', 'DsplayName']
 query1 = "Agency_ID IN ('Alpine', 'Highland')"
 with arcpy.da.UpdateCursor("working_lyr_3", fields, query1) as update_cursor:
-    print("Looping through rows in FC ...")
+    print("Updating Lone Peak PD jurisdication ...")
     for row in update_cursor:
         row[0] = 'AGRC'
         row[1] = datetime.now()
         row[2] = 'UT'
         row[3] = 'LONE PEAK PD'
         row[4] = 'LONE PEAK POLICE DEPARTMENT'
-        update_count += 1
         update_cursor.updateRow(row)
-print("Total count of updates is: {}".format(update_count))
 
 # Populate fields with information and rename to combo jurisdiction (North Park)
-update_count = 0
 #            0           1           2          3            4
 fields = ['Source', 'DateUpdate', 'State', 'Agency_ID', 'DsplayName']
 query2 = "Agency_ID IN ('North Logan', 'Hyde Park')"
 with arcpy.da.UpdateCursor("working_lyr_3", fields, query2) as update_cursor:
-    print("Looping through rows in FC ...")
+    print("Updating North Park PD jurisdication ...")
     for row in update_cursor:
         row[0] = 'AGRC'
         row[1] = datetime.now()
         row[2] = 'UT'
         row[3] = 'NORTH PARK PD'
         row[4] = 'NORTH PARK POLICE DEPARTMENT'
-        update_count += 1
         update_cursor.updateRow(row)
-print("Total count of updates is: {}".format(update_count))
+
+# Populate fields with information and rename to combo jurisdiction (Santaquin)
+#            0           1           2          3            4
+fields = ['Source', 'DateUpdate', 'State', 'Agency_ID', 'DsplayName']
+query3 = "Agency_ID IN ('Santaquin', 'Genola')"
+with arcpy.da.UpdateCursor("working_lyr_3", fields, query3) as update_cursor:
+    print("Updating Santaquin PD jurisdication ...")
+    for row in update_cursor:
+        row[0] = 'AGRC'
+        row[1] = datetime.now()
+        row[2] = 'UT'
+        row[3] = 'SANTAQUIN PD'
+        row[4] = 'SANTAQUIN POLICE DEPARTMENT'
+        update_cursor.updateRow(row)
+
+# Populate fields with information and rename to combo jurisdiction (Parowan)
+#            0           1           2          3            4
+fields = ['Source', 'DateUpdate', 'State', 'Agency_ID', 'DsplayName']
+query4 = "Agency_ID IN ('Parowan', 'Paragonah')"
+with arcpy.da.UpdateCursor("working_lyr_3", fields, query4) as update_cursor:
+    print("Updating Parowan PD jurisdication ...")
+    for row in update_cursor:
+        row[0] = 'AGRC'
+        row[1] = datetime.now()
+        row[2] = 'UT'
+        row[3] = 'PAROWAN PD'
+        row[4] = 'PAROWAN POLICE DEPARTMENT'
+        update_cursor.updateRow(row)
+        
+# Populate fields with information and rename to combo jurisdiction (Santa Clara-Ivins)
+#            0           1           2          3            4
+fields = ['Source', 'DateUpdate', 'State', 'Agency_ID', 'DsplayName']
+query5 = "Agency_ID IN ('Santa Clara', 'Ivins')"
+with arcpy.da.UpdateCursor("working_lyr_3", fields, query5) as update_cursor:
+    print("Updating Santa Clara-Ivins PD jurisdication ...")
+    for row in update_cursor:
+        row[0] = 'AGRC'
+        row[1] = datetime.now()
+        row[2] = 'UT'
+        row[3] = 'SANTA CLARA-IVINS PD'
+        row[4] = 'SANTA CLARA-IVINS POLICE DEPARTMENT'
+        update_cursor.updateRow(row)
 
 # Dissolve jurisdictions with multiple polygons (Lone Peak, North Park)
 combos_diss = os.path.join(ng911_db, 'NG911_law_bound_combos_diss')
 combos_join = os.path.join(ng911_db, 'NG911_law_bound_combos_join')
+print("Dissolving combo jurisdications ...")
 arcpy.management.Dissolve(combos_temp, combos_diss, "Agency_ID")
 
 # Attempt with attribute join
@@ -277,20 +314,40 @@ arcpy.analysis.Erase(SOs_holes, unique, law_final)
 arcpy.management.Append(unique, law_final, "NO_TEST")
 
 # Ensure Unified PD is properly named (from remainder of Salt Lake County)
-update_count = 0
 #            0           1           2          3            4
 fields = ['Source', 'DateUpdate', 'State', 'Agency_ID', 'DsplayName']
-query3 = "Agency_ID = 'SALT LAKE COUNTY SO'"
-with arcpy.da.UpdateCursor(law_final, fields, query3) as update_cursor:
+query_1 = "Agency_ID = 'SALT LAKE COUNTY SO'"
+with arcpy.da.UpdateCursor(law_final, fields, query_1) as update_cursor:
     print("Looping through rows in FC ...")
     for row in update_cursor:
         row[3] = 'UNIFIED PD'
         row[4] = 'UNIFIED POLICE DEPARTMENT'
-        update_count += 1
         update_cursor.updateRow(row)
-print("Total count of updates is: {}".format(update_count))
+print("Updated Unified PD name ...")
 
+# Ensure Alta Marshal is properly named
+#            0           1           2          3            4
+fields = ['Source', 'DateUpdate', 'State', 'Agency_ID', 'DsplayName']
+query_2 = "Agency_ID LIKE '%ALTA %'"
+with arcpy.da.UpdateCursor(law_final, fields, query_2) as update_cursor:
+    print("Looping through rows in FC ...")
+    for row in update_cursor:
+        row[3] = 'ALTA MARSHAL'
+        row[4] = 'ALTA MARSHAL'
+        update_cursor.updateRow(row)
+print("Updated Alta Marshal name ...")
 
+# Ensure Brian Head is properly named
+#            0           1           2          3            4
+fields = ['Source', 'DateUpdate', 'State', 'Agency_ID', 'DsplayName']
+query_3 = "Agency_ID = 'BRIAN HEAD PD'"
+with arcpy.da.UpdateCursor(law_final, fields, query_3) as update_cursor:
+    print("Looping through rows in FC ...")
+    for row in update_cursor:
+        row[3] = 'BRIAN HEAD PS'
+        row[4] = 'BRIAN HEAD PUBLIC SAFETY'
+        update_cursor.updateRow(row)
+print("Updated Brian Head Public Safety name ...")
 
 # Project final data to WGS84
 print("Projecting final law boundaries into WGS84 ...")
