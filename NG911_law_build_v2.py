@@ -56,7 +56,7 @@ print(muni_pd)
 combos = {}
 print("Reading in text file for combo Police Departments ...")
 textfile_dir = r'C:\Users\eneemann\Desktop\Neemann\NG911\NG911_project'
-filename2 = os.path.join(textfile_dir, 'Combo_PDs_v2.txt')
+filename2 = os.path.join(textfile_dir, 'Combo_PDs.txt')
 with open(filename2, 'r') as filehandle:
     combo_temp = [muni.strip() for muni in filehandle.readlines()]
 for item in combo_temp:
@@ -72,6 +72,27 @@ for item in combo_temp:
     combos[first] = parts
 print(combos)
 
+# Read in text file of renamePDs
+renames = {}
+print("Reading in text file for renaming Police Departments ...")
+textfile_dir = r'C:\Users\eneemann\Desktop\Neemann\NG911\NG911_project'
+filename3 = os.path.join(textfile_dir, 'Rename_PDs.txt')
+with open(filename3, 'r') as filehandle:
+    rename_temp = [word.strip() for word in filehandle.readlines()]
+for item in rename_temp:
+    first = item.split(":")[0].strip()
+    print(f'first is: {first}')
+    second = item.split(":")[1].strip().replace('"', '')
+    print(f'second is: {second}')
+    parts = second.split(',')
+    parts = [part.strip() for part in parts]
+    print(f'parts is: {parts}')
+    num_parts = len(parts)
+    print(num_parts)
+    renames[first] = parts
+print(renames)
+
+# Set up more variables to be used later 
 SOs_temp = os.path.join(ng911_db, 'NG911_law_bound_SOs_temp')
 PDs_temp = os.path.join(ng911_db, 'NG911_law_bound_PDs_temp')
 PDs_diss = os.path.join(ng911_db, 'NG911_law_bound_PDs_diss')
@@ -90,7 +111,6 @@ law_wgs84 = os.path.join(ng911_db, 'NG911_law_bound_final_WGS84')
 def add_sheriff():
     # Build Sheriff's Office boundaries from county boundaries (law_SOs_temp)
     print("Building Sheriff's Office boundaries from counties ...")
-#    SOs_temp = os.path.join(ng911_db, 'NG911_law_bound_SOs_temp')
     arcpy.management.CopyFeatures(law_schema, SOs_temp)
     if arcpy.Exists("working_lyr"):
         arcpy.management.Delete("working_lyr")
@@ -140,7 +160,6 @@ def add_muni_pds():
     # Drop in other jurisdictions
     # Build Muncipality PD boundaries (law_PDs_temp)
     print("Building Police Department boundaries from Municipalities ...")
-#    PDs_temp = os.path.join(ng911_db, 'NG911_law_bound_PDs_temp')
     arcpy.management.CopyFeatures(law_schema, PDs_temp)
     if arcpy.Exists("working_lyr_2"):
         arcpy.management.Delete("working_lyr_2")
@@ -190,32 +209,9 @@ def add_muni_pds():
     print("Total count of updates is: {}".format(update_count))
 
 
-
-
-#combo_list = [ item.title() for sublist in (combos[key] for key in combos) for item in sublist ]
-#print(combo_list)
-#query_test = f"NAME IN ({', '.join(combo_list)})"
-#query_test = f"NAME IN ({combo_list})".replace('[', '').replace(']', '')
-##query_test = f"NAME IN ({', '.join(item for item in combo_list)})"
-#print(query_test)
-#
-#query1_test = "Agency_ID IN ('Alpine', 'Highland')"
-#
-#for key in combos:
-#    print(key)
-#    print(combos[key])
-#    temp_list = [ item.title() for item in combos[key] ]
-#    query1 = f"Agency_ID IN ({temp_list})".replace('[', '').replace(']', '')
-#    print(query1)
-
-
-
-
 def add_combos():
     # Dissolve jurisdictions with multiple polygons (Draper, Park City, Santaquin)
     print("Dissolving jurisdictions that cross county boundaries ...")
-#    PDs_diss = os.path.join(ng911_db, 'NG911_law_bound_PDs_diss')
-#    PDs_join = os.path.join(ng911_db, 'NG911_law_bound_PDs_join')
     arcpy.management.Dissolve(PDs_temp, PDs_diss, "Agency_ID")
     
     # Attempt with attribute join
@@ -230,7 +226,6 @@ def add_combos():
     
     # Build Lone Peak & North Park jurisdictions
     print("Building boundaries for PDs that cover multiple municipalities ...")
-#    combos_temp = os.path.join(ng911_db, 'NG911_law_bound_combos_temp')
     arcpy.management.CopyFeatures(law_schema, combos_temp)
     if arcpy.Exists("working_lyr_3"):
         arcpy.management.Delete("working_lyr_3")
@@ -241,9 +236,7 @@ def add_combos():
     print(combo_list)
     query_test = f"NAME IN ({combo_list})".replace('[', '').replace(']', '')
     print(query_test)
-    
-#    query = "NAME IN ('Alpine', 'Highland', 'North Logan', 'Hyde Park', 'Santaquin', 'Genola', 'Parowan', 'Paragonah', 'Santa Clara', 'Ivins')"
-#    print(query)
+
     arcpy.management.MakeFeatureLayer(munis, "muni_lyr_3", query_test)
     
     # Field Map county name into law schema fields
@@ -272,15 +265,11 @@ def add_combos():
     #            0           1           2          3            4   
     fields = ['Source', 'DateUpdate', 'State', 'Agency_ID', 'DsplayName']
     for key in combos:
-#        print(key)
-#        print(combos[key])
         temp_list = [ item.title() for item in combos[key] ]
         query1 = f"Agency_ID IN ({temp_list})".replace('[', '').replace(']', '')
-#        query1 = f"Agency_ID IN ({combos[key].title()})".replace('[', '').replace(']', '')
         print(query1)
-#        query1 = "Agency_ID IN ('Alpine', 'Highland')"
+        print(f"Updating {key} jurisdication ...")
         with arcpy.da.UpdateCursor("working_lyr_3", fields, query1) as update_cursor:
-            print(f"Updating {key} jurisdication ...")
             for row in update_cursor:
                 row[0] = 'AGRC'
                 row[1] = datetime.now()
@@ -289,80 +278,6 @@ def add_combos():
                 row[4] = key.replace(' PD', ' POLICE DEPARTMENT')
                 update_cursor.updateRow(row)
         
-    
-#    # Populate fields with information and rename to combo jurisdiction (Lone Peak)
-#    #            0           1           2          3            4
-#    fields = ['Source', 'DateUpdate', 'State', 'Agency_ID', 'DsplayName']
-#    query1 = "Agency_ID IN ('Alpine', 'Highland')"
-#    with arcpy.da.UpdateCursor("working_lyr_3", fields, query1) as update_cursor:
-#        print("Updating Lone Peak PD jurisdication ...")
-#        for row in update_cursor:
-#            row[0] = 'AGRC'
-#            row[1] = datetime.now()
-#            row[2] = 'UT'
-#            row[3] = 'LONE PEAK PD'
-#            row[4] = 'LONE PEAK POLICE DEPARTMENT'
-#            update_cursor.updateRow(row)
-#    
-#    # Populate fields with information and rename to combo jurisdiction (North Park)
-#    #            0           1           2          3            4
-#    fields = ['Source', 'DateUpdate', 'State', 'Agency_ID', 'DsplayName']
-#    query2 = "Agency_ID IN ('North Logan', 'Hyde Park')"
-#    with arcpy.da.UpdateCursor("working_lyr_3", fields, query2) as update_cursor:
-#        print("Updating North Park PD jurisdication ...")
-#        for row in update_cursor:
-#            row[0] = 'AGRC'
-#            row[1] = datetime.now()
-#            row[2] = 'UT'
-#            row[3] = 'NORTH PARK PD'
-#            row[4] = 'NORTH PARK POLICE DEPARTMENT'
-#            update_cursor.updateRow(row)
-#    
-#    # Populate fields with information and rename to combo jurisdiction (Santaquin)
-#    #            0           1           2          3            4
-#    fields = ['Source', 'DateUpdate', 'State', 'Agency_ID', 'DsplayName']
-#    query3 = "Agency_ID IN ('Santaquin', 'Genola')"
-#    with arcpy.da.UpdateCursor("working_lyr_3", fields, query3) as update_cursor:
-#        print("Updating Santaquin PD jurisdication ...")
-#        for row in update_cursor:
-#            row[0] = 'AGRC'
-#            row[1] = datetime.now()
-#            row[2] = 'UT'
-#            row[3] = 'SANTAQUIN PD'
-#            row[4] = 'SANTAQUIN POLICE DEPARTMENT'
-#            update_cursor.updateRow(row)
-#    
-#    # Populate fields with information and rename to combo jurisdiction (Parowan)
-#    #            0           1           2          3            4
-#    fields = ['Source', 'DateUpdate', 'State', 'Agency_ID', 'DsplayName']
-#    query4 = "Agency_ID IN ('Parowan', 'Paragonah')"
-#    with arcpy.da.UpdateCursor("working_lyr_3", fields, query4) as update_cursor:
-#        print("Updating Parowan PD jurisdication ...")
-#        for row in update_cursor:
-#            row[0] = 'AGRC'
-#            row[1] = datetime.now()
-#            row[2] = 'UT'
-#            row[3] = 'PAROWAN PD'
-#            row[4] = 'PAROWAN POLICE DEPARTMENT'
-#            update_cursor.updateRow(row)
-#            
-#    # Populate fields with information and rename to combo jurisdiction (Santa Clara-Ivins)
-#    #            0           1           2          3            4
-#    fields = ['Source', 'DateUpdate', 'State', 'Agency_ID', 'DsplayName']
-#    query5 = "Agency_ID IN ('Santa Clara', 'Ivins')"
-#    with arcpy.da.UpdateCursor("working_lyr_3", fields, query5) as update_cursor:
-#        print("Updating Santa Clara-Ivins PD jurisdication ...")
-#        for row in update_cursor:
-#            row[0] = 'AGRC'
-#            row[1] = datetime.now()
-#            row[2] = 'UT'
-#            row[3] = 'SANTA CLARA-IVINS PD'
-#            row[4] = 'SANTA CLARA-IVINS POLICE DEPARTMENT'
-#            update_cursor.updateRow(row)
-    
-    # Dissolve jurisdictions with multiple polygons (combos)
-#    combos_diss = os.path.join(ng911_db, 'NG911_law_bound_combos_diss')
-#    combos_join = os.path.join(ng911_db, 'NG911_law_bound_combos_join')
     print("Dissolving combo jurisdications ...")
     arcpy.management.Dissolve(combos_temp, combos_diss, "Agency_ID")
     
@@ -377,7 +292,6 @@ def add_combos():
     # Drop police departments into sheriffs offices via erase/append
     print("Inserting PD boundaries into Sheriff's Office boundaries ...")
     # Erase
-#    SOs_holes = os.path.join(ng911_db, 'NG911_law_bound_SOs_holes')
     arcpy.analysis.Erase(SOs_temp, PDs_join, SOs_holes)
     # Append
     arcpy.management.Append(PDs_join, SOs_holes, "NO_TEST")
@@ -387,7 +301,6 @@ def add_unique_pds():
     # Drop in unique districts via erase/append (law_unique_temp) - tribal, Navajo Nation, etc.
     print("Adding unique districts into SOs/PDs layer ...")
     # Erase
-#    law_final = os.path.join(ng911_db, 'NG911_law_bound_final')
     arcpy.analysis.Erase(SOs_holes, unique, law_final)
     # Append
     arcpy.management.Append(unique, law_final, "NO_TEST")
@@ -397,40 +310,22 @@ def correct_names():
     # Ensure Unified PD is properly named (from remainder of Salt Lake County)
     #            0           1           2          3            4
     fields = ['Source', 'DateUpdate', 'State', 'Agency_ID', 'DsplayName']
-    query_1 = "Agency_ID = 'SALT LAKE COUNTY SO'"
-    print("Updating Unified PD name ...")
-    with arcpy.da.UpdateCursor(law_final, fields, query_1) as update_cursor:
-        for row in update_cursor:
-            row[3] = 'UNIFIED PD'
-            row[4] = 'UNIFIED POLICE DEPARTMENT'
-            update_cursor.updateRow(row)
-    
-    # Ensure Alta Marshal is properly named
-    #            0           1           2          3            4
-    fields = ['Source', 'DateUpdate', 'State', 'Agency_ID', 'DsplayName']
-    query_2 = "Agency_ID LIKE '%ALTA %'"
-    print("Updating Alta Marshal name ...")
-    with arcpy.da.UpdateCursor(law_final, fields, query_2) as update_cursor:
-        for row in update_cursor:
-            row[3] = 'ALTA MARSHAL'
-            row[4] = 'ALTA MARSHAL'
-            update_cursor.updateRow(row)
-    
-    # Ensure Brian Head is properly named
-    #            0           1           2          3            4
-    fields = ['Source', 'DateUpdate', 'State', 'Agency_ID', 'DsplayName']
-    query_3 = "Agency_ID = 'BRIAN HEAD PD'"
-    print("Updating Brian Head Public Safety name ...")
-    with arcpy.da.UpdateCursor(law_final, fields, query_3) as update_cursor:
-        for row in update_cursor:
-            row[3] = 'BRIAN HEAD PS'
-            row[4] = 'BRIAN HEAD PUBLIC SAFETY'
-            update_cursor.updateRow(row)
+    for key in renames:
+        print(f"Updating {key} jurisdiction name ...")
+        query2 = f"Agency_ID = '{key}'"
+        print(query2)
+        print(f'new Agency_ID is: {renames[key][0]}')
+        print(f'new DsplayName is: {renames[key][1]}')
+        with arcpy.da.UpdateCursor(law_final, fields, query2) as update_cursor:
+            for row in update_cursor:
+                row[3] = renames[key][0]
+                row[4] = renames[key][1]
+                update_cursor.updateRow(row)
+       
 
 def project_to_WGS84():
     # Project final data to WGS84
     print("Projecting final law boundaries into WGS84 ...")
-#    law_wgs84 = os.path.join(ng911_db, 'NG911_law_bound_final_WGS84')
     sr = arcpy.SpatialReference("WGS 1984")
     arcpy.management.Project(law_final, law_wgs84, sr, "WGS_1984_(ITRF00)_To_NAD_1983")
 
