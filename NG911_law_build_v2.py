@@ -20,9 +20,11 @@ print("The script start time is {}".format(readable_start))
 #  Set up variables  #
 ######################
 
+# Set up databases (SGID must be changed based on user's path)
 SGID = r"C:\Users\eneemann\AppData\Roaming\ESRI\ArcGISPro\Favorites\sgid.agrc.utah.gov.sde"
-ng911_db = r"C:\Users\eneemann\Desktop\Neemann\NG911\NG911_project\NG911_project.gdb"
-#ng911_db = r"L:\agrc\data\ng911\NG911_boundary_work.gdb"
+ng911_db = r"L:\agrc\data\ng911\NG911_boundary_work.gdb"
+#ng911_db = r"C:\Users\eneemann\Desktop\Neemann\NG911\NG911_project\NG911_project.gdb"
+
 
 arcpy.env.workspace = ng911_db
 arcpy.env.overwriteOutput = True
@@ -40,7 +42,8 @@ law_working = os.path.join(ng911_db, 'NG911_Law_bound_working_' + today)
 
 # Read in text file of municipalities with PDs
 print("Reading in text file to get Municipalities with Police Departments ...")
-textfile_dir = r'C:\Users\eneemann\Desktop\Neemann\NG911\NG911_project'
+textfile_dir = r'L:\agrc\data\ng911'
+#textfile_dir = r'C:\Users\eneemann\Desktop\Neemann\NG911\NG911_project'
 filename = os.path.join(textfile_dir, 'Munis_with_PDs.txt')
 with open(filename, 'r') as filehandle:
     muni_pd_temp = [muni.strip() for muni in filehandle.readlines()]
@@ -72,7 +75,7 @@ for item in combo_temp:
     combos[first] = parts
 print(combos)
 
-# Read in text file of renamePDs
+# Read in text file of rename PDs
 renames = {}
 print("Reading in text file for renaming Police Departments ...")
 textfile_dir = r'C:\Users\eneemann\Desktop\Neemann\NG911\NG911_project'
@@ -92,7 +95,7 @@ for item in rename_temp:
     renames[first] = parts
 print(renames)
 
-# Set up more variables to be used later 
+# Set up more variables for intermediate and final feature classes
 SOs_temp = os.path.join(ng911_db, 'NG911_law_bound_SOs_temp')
 PDs_temp = os.path.join(ng911_db, 'NG911_law_bound_PDs_temp')
 PDs_diss = os.path.join(ng911_db, 'NG911_law_bound_PDs_diss')
@@ -101,8 +104,8 @@ combos_temp = os.path.join(ng911_db, 'NG911_law_bound_combos_temp')
 combos_diss = os.path.join(ng911_db, 'NG911_law_bound_combos_diss')
 combos_join = os.path.join(ng911_db, 'NG911_law_bound_combos_join')
 SOs_holes = os.path.join(ng911_db, 'NG911_law_bound_SOs_holes')
-law_final = os.path.join(ng911_db, 'NG911_law_bound_final')
-law_wgs84 = os.path.join(ng911_db, 'NG911_law_bound_final_WGS84')
+law_final = os.path.join(ng911_db, 'NG911_law_bound_final_' + today)
+law_wgs84 = os.path.join(ng911_db, 'NG911_law_bound_final_WGS84_' + today)
 
 ##################
 # Basic Workflow #
@@ -214,17 +217,15 @@ def add_combos():
     print("Dissolving jurisdictions that cross county boundaries ...")
     arcpy.management.Dissolve(PDs_temp, PDs_diss, "Agency_ID")
     
-    # Attempt with attribute join
+    # Add fields back in with attribute join
     arcpy.management.CopyFeatures(PDs_diss, PDs_join)
     fields_list = ['Source', 'DateUpdate', 'Effective', 'Expire', 'ES_NGUID', 'State',
                    'ServiceURI', 'ServiceURN', 'ServiceNum', 'AVcard_URI', 'DsplayName']
     print(fields_list)
     arcpy.management.JoinField(PDs_join, "Agency_ID", PDs_temp, "Agency_ID", fields_list)
     
-    # Add back in all fields via spatial join
-    #arcpy.analysis.SpatialJoin(PDs_diss, PDs_temp, PDs_join, "JOIN_ONE_TO_ONE", "KEEP_ALL", "", "CLOSEST")
     
-    # Build Lone Peak & North Park jurisdictions
+    # Build combo jurisdictions
     print("Building boundaries for PDs that cover multiple municipalities ...")
     arcpy.management.CopyFeatures(law_schema, combos_temp)
     if arcpy.Exists("working_lyr_3"):
@@ -329,9 +330,11 @@ def project_to_WGS84():
     sr = arcpy.SpatialReference("WGS 1984")
     arcpy.management.Project(law_final, law_wgs84, sr, "WGS_1984_(ITRF00)_To_NAD_1983")
 
-
+#----------------------------------------------------------------
+# Additional enhancements for the future
 # Drop in UHP boundaries - buffer state/federal highways (10-30m)
 # Only use buffers outside of municipalities?
+#----------------------------------------------------------------
 
 ###############
 #  Functions  #
