@@ -64,14 +64,10 @@ with open(filename2, 'r') as filehandle:
     combo_temp = [muni.strip() for muni in filehandle.readlines()]
 for item in combo_temp:
     first = item.split(":")[0].strip()
-    print(f'first is: {first}')
     second = item.split(":")[1].strip().replace('"', '')
-    print(f'second is: {second}')
     parts = second.split(',')
     parts = [part.strip() for part in parts]
-    print(f'parts is: {parts}')
     num_parts = len(parts)
-    print(num_parts)
     combos[first] = parts
 print(combos)
 
@@ -84,14 +80,10 @@ with open(filename3, 'r') as filehandle:
     rename_temp = [word.strip() for word in filehandle.readlines()]
 for item in rename_temp:
     first = item.split(":")[0].strip()
-    print(f'first is: {first}')
     second = item.split(":")[1].strip().replace('"', '')
-    print(f'second is: {second}')
     parts = second.split(',')
     parts = [part.strip() for part in parts]
-    print(f'parts is: {parts}')
     num_parts = len(parts)
-    print(num_parts)
     renames[first] = parts
 print(renames)
 
@@ -107,9 +99,9 @@ SOs_holes = os.path.join(ng911_db, 'NG911_law_bound_SOs_holes')
 law_final = os.path.join(ng911_db, 'NG911_law_bound_final_' + today)
 law_wgs84 = os.path.join(ng911_db, 'NG911_law_bound_final_WGS84_' + today)
 
-##################
-# Basic Workflow #
-##################
+###############
+#  Functions  #
+###############
 
 def add_sheriff():
     # Build Sheriff's Office boundaries from county boundaries (law_SOs_temp)
@@ -333,23 +325,20 @@ def project_to_WGS84():
 #----------------------------------------------------------------
 # Additional enhancements for the future
 # Drop in UHP boundaries - buffer state/federal highways (10-30m)
-# Only use buffers outside of municipalities?
+#   Only use buffers outside of municipalities?
 #----------------------------------------------------------------
 
-###############
-#  Functions  #
-###############
 
+##########################
+#  Call Functions Below  #
+##########################
+    
 add_sheriff()
 add_muni_pds()
 add_combos()
 add_unique_pds()
 correct_names()
 project_to_WGS84()
-
-##########################
-#  Call Functions Below  #
-##########################
 
 print("Script shutting down ...")
 # Stop timer and print end time in UTC
