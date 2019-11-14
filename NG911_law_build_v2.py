@@ -58,7 +58,7 @@ print(muni_pd)
 # Read in text file of combo PDs
 combos = {}
 print("Reading in text file for combo Police Departments ...")
-textfile_dir = r'C:\Users\eneemann\Desktop\Neemann\NG911\NG911_project'
+#textfile_dir = r'C:\Users\eneemann\Desktop\Neemann\NG911\NG911_project'
 filename2 = os.path.join(textfile_dir, 'Combo_PDs.txt')
 with open(filename2, 'r') as filehandle:
     combo_temp = [muni.strip() for muni in filehandle.readlines()]
@@ -74,7 +74,7 @@ print(combos)
 # Read in text file of rename PDs
 renames = {}
 print("Reading in text file for renaming Police Departments ...")
-textfile_dir = r'C:\Users\eneemann\Desktop\Neemann\NG911\NG911_project'
+#textfile_dir = r'C:\Users\eneemann\Desktop\Neemann\NG911\NG911_project'
 filename3 = os.path.join(textfile_dir, 'Rename_PDs.txt')
 with open(filename3, 'r') as filehandle:
     rename_temp = [word.strip() for word in filehandle.readlines()]
