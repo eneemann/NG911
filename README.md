@@ -1,2 +1,2 @@
 # NG911
-Scripts to help with and build NG911 data
+Scripts to help build NG911 data
