@@ -21,7 +21,7 @@ print("The script start time is {}".format(readable_start))
 ######################
 
 # Set up databases (SGID must be changed based on user's path)
-SGID = r"C:\Users\eneemann\AppData\Roaming\ESRI\ArcGISPro\Favorites\sgid.agrc.utah.gov.sde"
+SGID = r"C:\Users\eneemann\AppData\Roaming\ESRI\ArcGISPro\Favorites\internal@SGID@internal.agrc.utah.gov.sde"
 ng911_db = r"L:\agrc\data\ng911\NG911_boundary_work.gdb"
 #ng911_db = r"C:\Users\eneemann\Desktop\Neemann\NG911\NG911_project\NG911_project.gdb"
 
