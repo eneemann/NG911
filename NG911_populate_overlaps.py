@@ -23,8 +23,8 @@ today = time.strftime("%Y%m%d")
 #  Set up variables  #
 ######################
 
-# Set up databases (SGID must be changed based on user's path)
-ng911_L = r"L:\agrc\data\ng911\NG911_boundary_work.gdb\EMS_Boundaries"
+# Set up databases
+ng911_L = r"\\itwfpcap2\AGRC\agrc\data\ng911\NG911_boundary_work.gdb\EMS_Boundaries"
 ng911_emn = r"C:\Users\eneemann\Desktop\Neemann\NG911\NG911_project\NG911_project.gdb"
 work_dir = r"C:\Users\eneemann\Desktop\Neemann\NG911\NG911_project\EMS Boundary Descriptions\working_files"
 
@@ -34,9 +34,16 @@ arcpy.env.overwriteOutput = True
 arcpy.env.qualifiedFieldNames = False
 
 # Set up feature classes and tables
-EMS_boundaries = os.path.join(ng911_L, 'NG911_EMS_bounds_20200212')
+# EMS_boundaries = os.path.join(ng911_L, 'NG911_EMS_bounds_20201215')
+EMS_boundaries = os.path.join(ng911_emn, 'EMS_Boundaries', 'NG911_EMS_bounds_20201215')
 count_polys = os.path.join(ng911_emn, f'NG911_EMS_bounds_{today}_counts')
 overlap_table = os.path.join(ng911_emn, f'NG911_EMS_bounds_{today}_overlap_table')
+
+# Delete new layers if they already exist
+if arcpy.Exists(count_polys):
+    print(f"Deleting {'count_polys'} ...")
+if arcpy.Exists(overlap_table):
+    print(f"Deleting {'overlap_table'} ...")
 
 # Create polygon counts and overlap table
 arcpy.analysis.CountOverlappingFeatures(EMS_boundaries, count_polys, 0, overlap_table)
