@@ -34,8 +34,6 @@ today = time.strftime("%Y%m%d")
 
 counties = os.path.join(SGID, 'SGID.BOUNDARIES.Counties')
 munis = os.path.join(SGID, 'SGID.BOUNDARIES.Municipalities')
-roads = os.path.join(SGID, 'SGID.TRANSPORTATION.Roads')
-old_law = os.path.join(SGID, 'SGID.SOCIETY.LawEnforcementBoundaries')
 unique = os.path.join(ng911_db, 'NG911_Law_unique_UTM')
 law_schema = os.path.join(ng911_db, 'NG911_Law_schema')
 law_working = os.path.join(ng911_db, 'NG911_Law_bound_working_' + today)
