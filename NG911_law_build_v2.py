@@ -22,7 +22,7 @@ print("The script start time is {}".format(readable_start))
 
 # Set up databases (SGID must be changed based on user's path)
 SGID = r"C:\Users\eneemann\AppData\Roaming\ESRI\ArcGISPro\Favorites\internal@SGID@internal.agrc.utah.gov.sde"
-ng911_db = r"L:\agrc\data\ng911\NG911_boundary_work.gdb"
+ng911_db = r"\\itwfpcap2\AGRC\agrc\data\ng911\NG911_boundary_work.gdb"
 #ng911_db = r"C:\Users\eneemann\Desktop\Neemann\NG911\NG911_project\NG911_project.gdb"
 
 
@@ -42,7 +42,7 @@ law_working = os.path.join(ng911_db, 'NG911_Law_bound_working_' + today)
 
 # Read in text file of municipalities with PDs
 print("Reading in text file to get Municipalities with Police Departments ...")
-textfile_dir = r'L:\agrc\data\ng911'
+textfile_dir = r'\\itwfpcap2\AGRC\agrc\data\ng911'
 #textfile_dir = r'C:\Users\eneemann\Desktop\Neemann\NG911\NG911_project'
 filename = os.path.join(textfile_dir, 'Munis_with_PDs.txt')
 with open(filename, 'r') as filehandle:
