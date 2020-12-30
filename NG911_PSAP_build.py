@@ -71,12 +71,22 @@ multi_muni = psap_info[psap_info['Type'] == 'multi muni']
 multi_muni.drop(['Key', 'Type', 'Counties'], axis=1, inplace=True)
 multi_muni_dict = multi_muni.set_index('PSAP').to_dict()['Munis']
 
+# Create dictionary for mixed PSAPs (county & muni boundaries)
+mixed = psap_info[psap_info['Type'] == 'mixed']
+mixed.drop(['Key', 'Type'], axis=1, inplace=True)
+mixed_county_dict = mixed.set_index('PSAP').to_dict()['Counties']
+mixed_muni_dict = mixed.set_index('PSAP').to_dict()['Munis']
 
 # Set up more variables for intermediate and final feature classes
 single_county_temp = os.path.join(ng911_db, 'NG911_psap_bound_sc_temp')
 multi_county_temp = os.path.join(ng911_db, 'NG911_psap_bound_mc_temp')
 all_county_temp = os.path.join(ng911_db, 'NG911_psap_bound_allc_temp')
 mc_diss = os.path.join(ng911_db, 'NG911_psap_bound_mc_diss')
+single_muni_temp = os.path.join(ng911_db, 'NG911_psap_bound_sm_temp')
+multi_muni_temp = os.path.join(ng911_db, 'NG911_psap_bound_mm_temp')
+mm_diss = os.path.join(ng911_db, 'NG911_psap_bound_mm_diss')
+county_single_muni_temp = os.path.join(ng911_db, 'NG911_psap_bound_allc_sm_temp')
+all_county_muni_temp = os.path.join(ng911_db, 'NG911_psap_bound_allcm_temp')
 # combos_temp = os.path.join(ng911_db, 'NG911_psap_bound_combos_temp')
 # combos_diss = os.path.join(ng911_db, 'NG911_psap_bound_combos_diss')
 # combos_join = os.path.join(ng911_db, 'NG911_psap_bound_combos_join')
@@ -84,7 +94,9 @@ mc_diss = os.path.join(ng911_db, 'NG911_psap_bound_mc_diss')
 # psap_final = os.path.join(ng911_db, 'NG911_psap_bound_final_' + today)
 # psap_wgs84 = os.path.join(ng911_db, 'NG911_psap_bound_final_WGS84_' + today)
 
-fc_list = [counties, munis, single_county_temp, multi_county_temp, all_county_temp, mc_diss]
+fc_list = [counties, munis, single_county_temp, multi_county_temp, all_county_temp,
+           mc_diss, single_muni_temp, multi_muni_temp, mm_diss, county_single_muni_temp,
+           all_county_muni_temp]
 
 for fc in fc_list:
     if arcpy.Exists(fc):
@@ -92,9 +104,19 @@ for fc in fc_list:
         arcpy.management.Delete(fc)
         
 # Copy SGID counties and munis to local fc
-
 arcpy.management.CopyFeatures(SGID_counties, counties)
 arcpy.management.CopyFeatures(SGID_munis, munis)
+
+# Upper case the names of the munis
+# Populate fields with correct information
+update_count = 0
+fields = ['NAME']
+with arcpy.da.UpdateCursor(munis, fields) as update_cursor:
+    for row in update_cursor:
+        row[0] = row[0].upper()
+        update_count += 1
+        update_cursor.updateRow(row)
+print(f"Total count of upper case muni name updates is: {update_count}")
 
 ###############
 #  Functions  #
@@ -104,11 +126,8 @@ def add_single_county():
     # Build single county PSAP boundaries from county boundaries
     print("Building single county PSAPs from county boundaries ...")
     arcpy.management.CopyFeatures(psap_schema, single_county_temp)
-    if arcpy.Exists("single_county_lyr"):
-        arcpy.management.Delete("single_county_lyr")
     if arcpy.Exists("county_lyr"):
         arcpy.management.Delete("county_lyr")
-    arcpy.management.MakeFeatureLayer(single_county_temp, "single_county_lyr")
     arcpy.management.MakeFeatureLayer(counties, "county_lyr")
     
     # Field Map county name into psap schema fields
@@ -148,11 +167,8 @@ def add_multi_county():
     # Build multi county PSAP boundaries from county boundaries
     print("Building multi county PSAPs from county boundaries ...")
     arcpy.management.CopyFeatures(psap_schema, multi_county_temp)
-    if arcpy.Exists("multi_county_lyr"):
-        arcpy.management.Delete("multi_county_lyr")
     if arcpy.Exists("county_lyr"):
         arcpy.management.Delete("county_lyr")
-    arcpy.management.MakeFeatureLayer(multi_county_temp, "multi_county_lyr")
     arcpy.management.MakeFeatureLayer(counties, "county_lyr")
        
     # Field Map county name into psap schema fields
@@ -174,8 +190,6 @@ def add_multi_county():
     print(mc_query)
     
     # Complete the append with field mapping and query to get all counties in group
-    # arcpy.MakeFeatureLayer_management(counties, "county_lyr_query", mc_query)
-    # print(f'Feature count in multi county layer: {arcpy.management.GetCount("county_lyr_query")}')
     arcpy.management.Append("county_lyr", multi_county_temp, "NO_TEST", field_mapping=fms, expression=mc_query)
     
     # Loop through and populate fields with appropriate information and rename to multi county psaps
@@ -185,15 +199,15 @@ def add_multi_county():
         print("Looping through rows in FC ...")
         for row in update_cursor:
             for k,v in multi_county_dict.items():
-                print(f'key: {k}     value: {v}')
+                # print(f'key: {k}     value: {v}')
                 if row[0] in v:
-                    print(f'Found {row[0]} in {v} ...')
+                    # print(f'Found {row[0]} in {v} ...')
                     row[0] = k
             update_count += 1
             update_cursor.updateRow(row)
     print(f"Total count of multi county updates is: {update_count}")
         
-    print("Dissolving combo jurisdications ...")
+    print("Dissolving multi county PSAPs ...")
     arcpy.management.Dissolve(multi_county_temp, mc_diss, "DsplayName")
     
     # Append multi county psaps into single county psaps fc
@@ -203,19 +217,14 @@ def add_multi_county():
     
 
 def add_single_muni():
-    # Drop in other jurisdictions
-    # Build Muncipality PD boundaries (psap_PDs_temp)
-    print("Building Police Department boundaries from Municipalities ...")
-    arcpy.management.CopyFeatures(psap_schema, PDs_temp)
-    if arcpy.Exists("working_lyr_2"):
-        arcpy.management.Delete("working_lyr_2")
-    arcpy.management.MakeFeatureLayer(PDs_temp, "working_lyr_2")
-    temp_list = ",".join(f"'{item.upper()}'" for item in muni_pd)
-    query = f"NAME IN ({temp_list})"
-    print(query)
-    arcpy.management.MakeFeatureLayer(munis, "muni_lyr", query)
+    # Build single muni PSAP boundaries from muni boundaries
+    print("Building single muni PSAPs from muni boundaries ...")
+    arcpy.management.CopyFeatures(psap_schema, single_muni_temp)
+    if arcpy.Exists("muni_lyr"):
+        arcpy.management.Delete("muni_lyr")
+    arcpy.management.MakeFeatureLayer(munis, "muni_lyr")
     
-    # Field Map county name into psap schema fields
+    # Field Map muni name into psap schema fields
     fms = arcpy.FieldMappings()
     
     # NAME to DsplayName
@@ -226,50 +235,98 @@ def add_single_muni():
     fm_name.outputField = output
     fms.addFieldMap(fm_name)
     
-    # NAME to Agency_ID
-    fm_agency = arcpy.FieldMap()
-    fm_agency.addInputField("muni_lyr", "NAME")
-    output = fm_agency.outputField
-    output.name = "Agency_ID"
-    fm_agency.outputField = output
-    fms.addFieldMap(fm_agency)
+    # Complete the append with field mapping and query
+    sm_list = list(single_muni_dict.values())
+    print(sm_list)
+    sm_query = f"NAME IN ({sm_list})".replace('[', '').replace(']', '')
+    print(sm_query)
     
-    # Complete the append with field mapping
-    arcpy.management.Append("muni_lyr", "working_lyr_2", "NO_TEST", field_mapping=fms)
-    # now munis are in psap schema with only Agency_ID and DsplayName populated (sk_lyr_2, PDs_temp)
+    arcpy.management.Append("muni_lyr", single_muni_temp, "NO_TEST", field_mapping=fms, expression=sm_query)
     
-    # Populate fields with information
+    # Populate fields with correct information
     update_count = 0
-    #            0           1           2          3            4
-    fields = ['Source', 'DateUpdate', 'State', 'Agency_ID', 'DsplayName']
-    with arcpy.da.UpdateCursor("working_lyr_2", fields) as update_cursor:
+    fields = ['DsplayName']
+    with arcpy.da.UpdateCursor(single_muni_temp, fields) as update_cursor:
         print("Looping through rows in FC ...")
         for row in update_cursor:
-            row[0] = 'AGRC'
-            row[1] = datetime.now()
-            row[2] = 'UT'
-            row[3] = row[3].upper() + ' PD'
-            row[4] = row[4].upper() + ' POLICE DEPARTMENT'
+            for k,v in single_muni_dict.items():
+                if v == row[0]:
+                    row[0] = k
             update_count += 1
             update_cursor.updateRow(row)
-    print("Total count of updates is: {}".format(update_count))
+    print(f"Total count of single muni updates is: {update_count}")
     
-    # Drop police departments into sheriffs offices via erase/append
-    print("Inserting PD boundaries into Sheriff's Office boundaries ...")
+    # Drop in single muni psaps via erase/append
+    # temp = os.path.join(ng911_db, 'NG911_psap_all_county_holes')
+    # arcpy.management.CopyFeatures(all_county_temp, temp)
+    # 'in_memory\\all_county_holes'
+    print("Adding single muni PSAPs into working psaps layer ...")
     # Erase
-    arcpy.analysis.Erase(SOs_temp, PDs_join, SOs_holes)
+    arcpy.analysis.Erase(all_county_temp, single_muni_temp, county_single_muni_temp)
     # Append
-    arcpy.management.Append(PDs_join, SOs_holes, "NO_TEST")
+    arcpy.management.Append(single_muni_temp, county_single_muni_temp, "NO_TEST")
 
 
 def add_multi_muni():
-    # Dissolve jurisdictions with multiple munis (Draper, Park City, Santaquin)
-    test = None
+    # Build multi muni PSAP boundaries from muni boundaries
+    print("Building multi muni PSAPs from muni boundaries ...")
+    arcpy.management.CopyFeatures(psap_schema, multi_muni_temp)
+    if arcpy.Exists("muni_lyr"):
+        arcpy.management.Delete("muni_lyr")
+    arcpy.management.MakeFeatureLayer(munis, "muni_lyr")
+       
+    # Field Map muni name into psap schema fields
+    fms = arcpy.FieldMappings()
+    
+    # NAME to DsplayName
+    fm_name = arcpy.FieldMap()
+    fm_name.addInputField("muni_lyr", "NAME")
+    output = fm_name.outputField
+    output.name = "DsplayName"
+    fm_name.outputField = output
+    fms.addFieldMap(fm_name)
+    
+    # Build query to select multi muni 
+    mm_list = [ item.split(',') for item in list(multi_muni_dict.values())]
+    mm_list = [y.strip() for x in mm_list for y in x]
+    print(mm_list)
+    mm_query = f"NAME IN ({mm_list})".replace('[', '').replace(']', '')
+    print(mm_query)
+    
+    # Complete the append with field mapping and query to get all munis in group
+    arcpy.management.Append("muni_lyr", multi_muni_temp, "NO_TEST", field_mapping=fms, expression=mm_query)
+    
+    # Loop through and populate fields with appropriate information and rename to multi muni psaps
+    update_count = 0
+    fields = ['DsplayName']
+    with arcpy.da.UpdateCursor(multi_muni_temp, fields) as update_cursor:
+        print("Looping through rows in FC ...")
+        for row in update_cursor:
+            for k,v in multi_muni_dict.items():
+                # print(f'key: {k}     value: {v}')
+                if row[0] in v:
+                    # print(f'Found {row[0]} in {v} ...')
+                    row[0] = k
+            update_count += 1
+            update_cursor.updateRow(row)
+    print(f"Total count of multi muni updates is: {update_count}")
+        
+    print("Dissolving multi muni PSAPs ...")
+    arcpy.management.Dissolve(multi_muni_temp, mm_diss, "DsplayName")
+    
+    # Drop in multi muni psaps via erase/append
+    print("Adding multi muni PSAPs into working psaps layer ...")
+    # Erase
+    arcpy.analysis.Erase(county_single_muni_temp, multi_muni_temp, all_county_muni_temp)
+    # Append
+    arcpy.management.Append(multi_muni_temp, all_county_muni_temp, "NO_TEST")
     
     
 def add_unique_psaps():
-    # Drop in unique districts via erase/append (psap_unique_temp) - tribal, Navajo Nation, etc.
-    print("Adding unique districts into SOs/PDs layer ...")
+    # Assemble Provo based on muni boundary and static boundary
+    
+    # Drop in unique psaps via erase/append (psap_unique_temp) - tribal, Navajo Nation, etc.
+    print("Adding unique districts into working psaps layer ...")
     # Erase
     arcpy.analysis.Erase(SOs_holes, unique, psap_final)
     # Append
@@ -314,8 +371,8 @@ function_time = time.time()
 
 add_single_county()
 add_multi_county()
-# add_single_muni()
-# add_multi_muni()
+add_single_muni()
+add_multi_muni()
 # add_unique_psaps()
 # correct_names()
 # project_to_WGS84()
