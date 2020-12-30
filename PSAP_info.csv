@@ -1,0 +1,34 @@
+Key,PSAP,Type,Counties,Munis
+,Beaver County Sheriff's Office,single county,BEAVER,
+,Bountiful City Police Department,multi muni,,"BOUNTIFUL, WEST BOUNTIFUL, NORTH SALT LAKE, WOODS CROSS, CENTERVILLE"
+,Box Elder Communications Center/State DPS,single county,BOX ELDER,
+,Cedar Communications Center/State DPS,mixed,IRON,NEW HARMONY
+,Central Utah 911,multi county,"JUAB, UTAH",
+,Clearfield City Police Department,single muni,,CLEARFIELD
+,Colorado City Dispatch Center,single muni,,HILDALE
+,Davis County Sheriff's Office,single county,DAVIS,
+,Emery County Sheriff's Office,single county,EMERY,
+,Garfield County Sheriff's Office,single county,GARFIELD,
+,Grand County Sheriff's Office,single county,GRAND,
+,Hill Emergency Communications Center,unique,,
+,Kane County Sheriff's Office,single county,KANE,
+,Layton City Police Department,single muni,,LAYTON
+,Logan City Communications Center,single county,CACHE,
+,Millard County Sheriff's Office,single county,MILLARD,
+,Navajo Nation,unique,,
+,Orem City Department of Public Safety,multi muni,,"OREM, LINDON"
+,Price Communications Center/State DPS,single county,CARBON,
+,Provo City Police/Fire/EMS,unique,,
+,Rich County Sheriff's Office,single county,RICH,
+,Richfield Communications Center/State DPS,mixed,"SEVIER, PIUTE, WAYNE",ANTIMONY
+,Salt Lake City 911 Communcations Bureau,multi muni,,"SALT LAKE CITY, SANDY"
+,San Juan County Sheriff's Office,single county,SAN JUAN,
+,Sanpete County Sheriff's Office,single county,SANPETE,
+,Springville City Police Department,multi muni,,"SPRINGVILLE, MAPLETON"
+,St. George Police Department,single county,WASHINGTON,
+,Summit County Sheriff's Office,single county,SUMMIT,
+,Tooele County Sheriff's Office,single county,TOOELE,
+,Uintah Basin Communications Center/State DPS,multi county,"DUCHESNE, UINTAH, DAGGETT",
+,Salt Lake Valley Emergency Communications Center,single county,SALT LAKE,
+,Wasatch County Sheriff's Office,single county,WASATCH,
+,Weber Area Dispatch 911,multi county,"WEBER, MORGAN",
