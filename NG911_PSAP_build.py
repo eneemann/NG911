@@ -82,6 +82,9 @@ single_county_temp = os.path.join(ng911_db, 'NG911_psap_bound_sc_temp')
 multi_county_temp = os.path.join(ng911_db, 'NG911_psap_bound_mc_temp')
 all_county_temp = os.path.join(ng911_db, 'NG911_psap_bound_allc_temp')
 mc_diss = os.path.join(ng911_db, 'NG911_psap_bound_mc_diss')
+mixed_temp = os.path.join(ng911_db, 'NG911_psap_bound_mixed_temp')
+mixed_diss = os.path.join(ng911_db, 'NG911_psap_bound_mixed_diss')
+all_mixed_temp = os.path.join(ng911_db, 'NG911_psap_bound_allmixed_temp')
 single_muni_temp = os.path.join(ng911_db, 'NG911_psap_bound_sm_temp')
 multi_muni_temp = os.path.join(ng911_db, 'NG911_psap_bound_mm_temp')
 mm_diss = os.path.join(ng911_db, 'NG911_psap_bound_mm_diss')
@@ -95,8 +98,8 @@ all_county_muni_temp = os.path.join(ng911_db, 'NG911_psap_bound_allcm_temp')
 # psap_wgs84 = os.path.join(ng911_db, 'NG911_psap_bound_final_WGS84_' + today)
 
 fc_list = [counties, munis, single_county_temp, multi_county_temp, all_county_temp,
-           mc_diss, single_muni_temp, multi_muni_temp, mm_diss, county_single_muni_temp,
-           all_county_muni_temp]
+           mc_diss, mixed_temp, mixed_diss, all_mixed_temp, single_muni_temp, multi_muni_temp,
+           mm_diss, county_single_muni_temp, all_county_muni_temp]
 
 for fc in fc_list:
     if arcpy.Exists(fc):
@@ -216,6 +219,92 @@ def add_multi_county():
     arcpy.management.Append(mc_diss, all_county_temp, "NO_TEST")
     
 
+def add_mixed_psaps():
+    # Build multi mixed PSAP boundaries from county and muni boundaries
+    print("Building mixed PSAPs from county and muni boundaries ...")
+    arcpy.management.CopyFeatures(psap_schema, mixed_temp)
+    if arcpy.Exists("county_lyr"):
+        arcpy.management.Delete("county_lyr")
+    if arcpy.Exists("muni_lyr"):
+        arcpy.management.Delete("muni_lyr")
+    arcpy.management.MakeFeatureLayer(counties, "county_lyr")
+    arcpy.management.MakeFeatureLayer(munis, "muni_lyr")
+    
+    # Assemble counties
+    # Field Map county name into psap schema fields
+    fms = arcpy.FieldMappings()
+    
+    # NAME to DsplayName
+    fm_name = arcpy.FieldMap()
+    fm_name.addInputField("county_lyr", "NAME")
+    output = fm_name.outputField
+    output.name = "DsplayName"
+    fm_name.outputField = output
+    fms.addFieldMap(fm_name)
+    
+    # Build query to select multi county 
+    mixc_list = [ item.split(',') for item in list(mixed_county_dict.values())]
+    mixc_list = [y.strip() for x in mixc_list for y in x]
+    print(mixc_list)
+    mixc_query = f"NAME IN ({mixc_list})".replace('[', '').replace(']', '')
+    print(mixc_query)
+    
+    # Complete the append with field mapping and query to get all counties in group
+    arcpy.management.Append("county_lyr", mixed_temp, "NO_TEST", field_mapping=fms, expression=mixc_query)
+    
+    # Assemble munis and append
+    # Field Map muni name into psap schema fields
+    fms = arcpy.FieldMappings()
+    
+    # NAME to DsplayName
+    fm_name = arcpy.FieldMap()
+    fm_name.addInputField("muni_lyr", "NAME")
+    output = fm_name.outputField
+    output.name = "DsplayName"
+    fm_name.outputField = output
+    fms.addFieldMap(fm_name)
+    
+    # Build query to select multi muni 
+    mixm_list = [ item.split(',') for item in list(mixed_muni_dict.values())]
+    mixm_list = [y.strip() for x in mixm_list for y in x]
+    print(mixm_list)
+    mixm_query = f"NAME IN ({mixm_list})".replace('[', '').replace(']', '')
+    print(mixm_query)
+    
+    # Complete the append with field mapping and query to get all counties in group
+    arcpy.management.Append("muni_lyr", mixed_temp, "NO_TEST", field_mapping=fms, expression=mixm_query)
+     
+    # Loop through and populate fields with appropriate information and rename to mixed psaps
+    update_count = 0
+    fields = ['DsplayName']
+    with arcpy.da.UpdateCursor(mixed_temp, fields) as update_cursor:
+        print("Looping through rows in FC ...")
+        for row in update_cursor:
+            for k,v in mixed_county_dict.items():
+                # print(f'key: {k}     value: {v}')
+                if row[0] in v:
+                    # print(f'Found {row[0]} in {v} ...')
+                    row[0] = k
+            for k,v in mixed_muni_dict.items():
+                # print(f'key: {k}     value: {v}')
+                if row[0] in v:
+                    # print(f'Found {row[0]} in {v} ...')
+                    row[0] = k
+            update_count += 1
+            update_cursor.updateRow(row)
+    print(f"Total count of mixed PSAP updates is: {update_count}")
+        
+    print("Dissolving mixed PSAPs ...")
+    arcpy.management.Dissolve(mixed_temp, mixed_diss, "DsplayName")
+    
+    # Drop in mixed psaps via erase/append
+    print("Adding mixed PSAPs into working psaps layer ...")
+    # Erase
+    arcpy.analysis.Erase(all_county_temp, mixed_diss, all_mixed_temp)
+    # Append
+    arcpy.management.Append(mixed_diss, all_mixed_temp, "NO_TEST")    
+
+
 def add_single_muni():
     # Build single muni PSAP boundaries from muni boundaries
     print("Building single muni PSAPs from muni boundaries ...")
@@ -262,7 +351,7 @@ def add_single_muni():
     # 'in_memory\\all_county_holes'
     print("Adding single muni PSAPs into working psaps layer ...")
     # Erase
-    arcpy.analysis.Erase(all_county_temp, single_muni_temp, county_single_muni_temp)
+    arcpy.analysis.Erase(all_mixed_temp, single_muni_temp, county_single_muni_temp)
     # Append
     arcpy.management.Append(single_muni_temp, county_single_muni_temp, "NO_TEST")
 
@@ -317,9 +406,9 @@ def add_multi_muni():
     # Drop in multi muni psaps via erase/append
     print("Adding multi muni PSAPs into working psaps layer ...")
     # Erase
-    arcpy.analysis.Erase(county_single_muni_temp, multi_muni_temp, all_county_muni_temp)
+    arcpy.analysis.Erase(county_single_muni_temp, mm_diss, all_county_muni_temp)
     # Append
-    arcpy.management.Append(multi_muni_temp, all_county_muni_temp, "NO_TEST")
+    arcpy.management.Append(mm_diss, all_county_muni_temp, "NO_TEST")
     
     
 def add_unique_psaps():
@@ -371,6 +460,7 @@ function_time = time.time()
 
 add_single_county()
 add_multi_county()
+add_mixed_psaps()
 add_single_muni()
 add_multi_muni()
 # add_unique_psaps()
