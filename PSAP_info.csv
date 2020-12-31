@@ -29,6 +29,6 @@ Key,PSAP,Type,Counties,Munis
 ,Summit County Sheriff's Office,single county,SUMMIT,
 ,Tooele County Sheriff's Office,single county,TOOELE,
 ,Uintah Basin Communications Center/State DPS,multi county,"DUCHESNE, UINTAH, DAGGETT",
-,Salt Lake Valley Emergency Communications Center,single county,SALT LAKE,
+,Salt Lake Valley Emergency Communications Center,mixed,SALT LAKE,"BLUFFDALE, DRAPER"
 ,Wasatch County Sheriff's Office,single county,WASATCH,
 ,Weber Area Dispatch 911,multi county,"WEBER, MORGAN",
