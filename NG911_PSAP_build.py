@@ -77,6 +77,14 @@ mixed.drop(['Key', 'Type'], axis=1, inplace=True)
 mixed_county_dict = mixed.set_index('PSAP').to_dict()['Counties']
 mixed_muni_dict = mixed.set_index('PSAP').to_dict()['Munis']
 
+# Create dictionary for unique PSAPs (county & muni boundaries)
+unique = psap_info[psap_info['Type'] == 'unique']
+unique.drop(['Key', 'Type'], axis=1, inplace=True)
+unique_county_df = unique.dropna(subset=['Counties'])
+unique_muni_df = unique.dropna(subset=['Munis'])
+unique_county_dict = unique_county_df.set_index('PSAP').to_dict()['Counties']
+unique_muni_dict = unique_muni_df.set_index('PSAP').to_dict()['Munis']
+
 # Set up more variables for intermediate and final feature classes
 single_county_temp = os.path.join(ng911_db, 'NG911_psap_bound_sc_temp')
 multi_county_temp = os.path.join(ng911_db, 'NG911_psap_bound_mc_temp')
@@ -90,6 +98,16 @@ multi_muni_temp = os.path.join(ng911_db, 'NG911_psap_bound_mm_temp')
 mm_diss = os.path.join(ng911_db, 'NG911_psap_bound_mm_diss')
 county_single_muni_temp = os.path.join(ng911_db, 'NG911_psap_bound_allc_sm_temp')
 all_county_muni_temp = os.path.join(ng911_db, 'NG911_psap_bound_allcm_temp')
+fixed_edges = os.path.join(ng911_db, 'NG911_PSAP_fixed_edges')
+poly_fixes = os.path.join(ng911_db, 'NG911_PSAP_poly_fixes')
+unique_muni_temp = os.path.join(ng911_db, 'NG911_PSAP_um_temp')
+unique_muni_erased = os.path.join(ng911_db, 'NG911_PSAP_um_erased')
+unique_county_temp = os.path.join(ng911_db, 'NG911_PSAP_uc_temp')
+unique_county_muni_temp = os.path.join(ng911_db, 'NG911_psap_bound_uniquecm_temp')
+
+unique = os.path.join(ng911_db, 'NG911_PSAP_unique_UTM') # Hill AFB and NN
+unique_diss = os.path.join(ng911_db, 'NG911_PSAP_unique_diss') # Hill AFB and NN
+all_unique_temp = os.path.join(ng911_db, 'NG911_PSAP_allu_temp') # add in others before cutting in
 # combos_temp = os.path.join(ng911_db, 'NG911_psap_bound_combos_temp')
 # combos_diss = os.path.join(ng911_db, 'NG911_psap_bound_combos_diss')
 # combos_join = os.path.join(ng911_db, 'NG911_psap_bound_combos_join')
@@ -99,7 +117,8 @@ all_county_muni_temp = os.path.join(ng911_db, 'NG911_psap_bound_allcm_temp')
 
 fc_list = [counties, munis, single_county_temp, multi_county_temp, all_county_temp,
            mc_diss, mixed_temp, mixed_diss, all_mixed_temp, single_muni_temp, multi_muni_temp,
-           mm_diss, county_single_muni_temp, all_county_muni_temp]
+           mm_diss, county_single_muni_temp, all_county_muni_temp, unique_muni_temp,
+           unique_muni_erased, unique_county_temp, unique_county_muni_temp, unique_diss, all_unique_temp]
 
 for fc in fc_list:
     if arcpy.Exists(fc):
@@ -220,7 +239,7 @@ def add_multi_county():
     
 
 def add_mixed_psaps():
-    # Build multi mixed PSAP boundaries from county and muni boundaries
+    # Build mixed PSAP boundaries from county and muni boundaries
     print("Building mixed PSAPs from county and muni boundaries ...")
     arcpy.management.CopyFeatures(psap_schema, mixed_temp)
     if arcpy.Exists("county_lyr"):
@@ -412,14 +431,112 @@ def add_multi_muni():
     
     
 def add_unique_psaps():
-    # Assemble Provo based on muni boundary and static boundary
+    # Assemble VECC, Provo based on mixed boundaries and append static boundaries (Hill AFB, NN)
+    print("Building unique PSAPs from county, muni, and fixed boundaries ...")
+    arcpy.management.CopyFeatures(psap_schema, unique_muni_temp)
+    arcpy.management.CopyFeatures(psap_schema, unique_county_temp)
+    if arcpy.Exists("county_lyr"):
+        arcpy.management.Delete("county_lyr")
+    if arcpy.Exists("muni_lyr"):
+        arcpy.management.Delete("muni_lyr")
+    arcpy.management.MakeFeatureLayer(counties, "county_lyr")
+    arcpy.management.MakeFeatureLayer(munis, "muni_lyr")
     
-    # Drop in unique psaps via erase/append (psap_unique_temp) - tribal, Navajo Nation, etc.
-    print("Adding unique districts into working psaps layer ...")
+    # Assemble munis
+    # Field Map muni name into psap schema fields
+    fms = arcpy.FieldMappings()
+    
+    # NAME to DsplayName
+    fm_name = arcpy.FieldMap()
+    fm_name.addInputField("muni_lyr", "NAME")
+    output = fm_name.outputField
+    output.name = "DsplayName"
+    fm_name.outputField = output
+    fms.addFieldMap(fm_name)
+    
+    # Build query to select multi muni 
+    unim_list = [ item.split(',') for item in list(unique_muni_dict.values())]
+    unim_list = [y.strip() for x in unim_list for y in x]
+    print(unim_list)
+    unim_query = f"NAME IN ({unim_list})".replace('[', '').replace(']', '')
+    print(unim_query)
+    
+    # Complete the append with field mapping and query to get all counties in group
+    arcpy.management.Append("muni_lyr", unique_muni_temp, "NO_TEST", field_mapping=fms, expression=unim_query)
+    
+    # Buffer fixed edge layer
+    print("Buffering fixed edges and erasing muni layer ...")
+    arcpy.analysis.Buffer(fixed_edges, 'in_memory\\edge_buffer', '100 Meters')
+    
+    # Erase current muni layer with buffer
+    arcpy.analysis.Erase(unique_muni_temp, 'in_memory\\edge_buffer', unique_muni_erased)
+    
+    # Append polygon fixes into erased muni layer
+    print("Appending polygon fixes to erased muni layer ...")
+    arcpy.management.Append(poly_fixes, unique_muni_erased, "NO_TEST")
+      
+    # Assemble counties and cut in poly-fixed muni layer
+    # Field Map county name into psap schema fields
+    fms = arcpy.FieldMappings()
+    
+    # NAME to DsplayName
+    fm_name = arcpy.FieldMap()
+    fm_name.addInputField("county_lyr", "NAME")
+    output = fm_name.outputField
+    output.name = "DsplayName"
+    fm_name.outputField = output
+    fms.addFieldMap(fm_name)
+    
+    # Build query to select multi county 
+    unic_list = [ item.split(',') for item in list(unique_county_dict.values())]
+    unic_list = [y.strip() for x in unic_list for y in x]
+    print(unic_list)
+    unic_query = f"NAME IN ({unic_list})".replace('[', '').replace(']', '')
+    print(unic_query)
+    
+    # Complete the append with field mapping and query to create county layer
+    arcpy.management.Append("county_lyr", unique_county_temp, "NO_TEST", field_mapping=fms, expression=unic_query)
+    
+    # Erase county layer with poly-fixed muni layer
+    arcpy.analysis.Erase(unique_county_temp, unique_muni_erased, unique_county_muni_temp)
+    
+    # Append poly-fixed muni layer into county layer with holes
+    print("Appending polygon fixes to erased muni layer ...")
+    arcpy.management.Append(unique_muni_erased, unique_county_muni_temp, "NO_TEST")
+    
+    # Loop through and populate fields with appropriate information and rename polygons
+    update_count = 0
+    fields = ['DsplayName']
+    with arcpy.da.UpdateCursor(unique_county_muni_temp, fields) as update_cursor:
+        print("Looping through rows in FC ...")
+        for row in update_cursor:
+            for k,v in unique_county_dict.items():
+                # print(f'key: {k}     value: {v}')
+                if row[0] in v:
+                    # print(f'Found {row[0]} in {v} ...')
+                    row[0] = k
+            for k,v in unique_muni_dict.items():
+                # print(f'key: {k}     value: {v}')
+                if row[0] in v:
+                    # print(f'Found {row[0]} in {v} ...')
+                    row[0] = k
+            update_count += 1
+            update_cursor.updateRow(row)
+    print(f"Total count of unique PSAP updates is: {update_count}")
+    
+    # Now append the unique/static PSAPS (Hill AFB, NN) into the working layer
+    print("Appending unique/static PSAPs ...")
+    arcpy.management.Append(unique, unique_county_muni_temp, "NO_TEST")   
+    
+    print("Dissolving unique PSAPs ...")
+    arcpy.management.Dissolve(unique_county_muni_temp, unique_diss, "DsplayName")
+    
+    # Drop in unique psaps via erase/append
+    print("Adding unique PSAPs into working psaps layer ...")
     # Erase
-    arcpy.analysis.Erase(SOs_holes, unique, psap_final)
+    arcpy.analysis.Erase(all_county_muni_temp, unique_diss, all_unique_temp)
     # Append
-    arcpy.management.Append(unique, psap_final, "NO_TEST")
+    arcpy.management.Append(unique_diss, all_unique_temp, "NO_TEST") 
     
 
 def correct_names():
@@ -445,12 +562,6 @@ def project_to_WGS84():
     sr = arcpy.SpatialReference("WGS 1984")
     arcpy.management.Project(psap_final, psap_wgs84, sr, "WGS_1984_(ITRF00)_To_NAD_1983")
 
-#----------------------------------------------------------------
-# Additional enhancements for the future
-# Drop in UHP boundaries - buffer state/federal highways (10-30m)
-#   Only use buffers outside of municipalities?
-#----------------------------------------------------------------
-
 
 ##########################
 #  Call Functions Below  #
@@ -463,7 +574,7 @@ add_multi_county()
 add_mixed_psaps()
 add_single_muni()
 add_multi_muni()
-# add_unique_psaps()
+add_unique_psaps()
 # correct_names()
 # project_to_WGS84()
 
