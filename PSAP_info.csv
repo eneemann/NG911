@@ -18,10 +18,10 @@ Key,PSAP,Type,Counties,Munis
 ,Navajo Nation,unique,,
 ,Orem City Department of Public Safety,multi muni,,"OREM, LINDON"
 ,Price Communications Center/State DPS,single county,CARBON,
-,Provo City Police/Fire/EMS,unique,,
+,Provo City Police/Fire/EMS,unique,,PROVO
 ,Rich County Sheriff's Office,single county,RICH,
-,Richfield Communications Center/State DPS,mixed,"SEVIER, PIUTE, WAYNE",ANTIMONY
-,Salt Lake City 911 Communcations Bureau,multi muni,,"SALT LAKE CITY, SANDY"
+,Richfield Communications Center/State DPS,unique,"SEVIER, PIUTE, WAYNE",ANTIMONY
+,Salt Lake City 911 Communcations Bureau,unique,,"SALT LAKE CITY, SANDY"
 ,San Juan County Sheriff's Office,single county,SAN JUAN,
 ,Sanpete County Sheriff's Office,single county,SANPETE,
 ,Springville City Police Department,multi muni,,"SPRINGVILLE, MAPLETON"
@@ -29,6 +29,6 @@ Key,PSAP,Type,Counties,Munis
 ,Summit County Sheriff's Office,single county,SUMMIT,
 ,Tooele County Sheriff's Office,single county,TOOELE,
 ,Uintah Basin Communications Center/State DPS,multi county,"DUCHESNE, UINTAH, DAGGETT",
-,Salt Lake Valley Emergency Communications Center,mixed,SALT LAKE,"BLUFFDALE, DRAPER"
+,Salt Lake Valley Emergency Communications Center,unique,SALT LAKE,"BLUFFDALE, DRAPER"
 ,Wasatch County Sheriff's Office,single county,WASATCH,
 ,Weber Area Dispatch 911,multi county,"WEBER, MORGAN",
