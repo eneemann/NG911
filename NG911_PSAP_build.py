@@ -472,8 +472,9 @@ def add_unique_psaps():
     arcpy.analysis.Erase(unique_muni_temp, 'in_memory\\edge_buffer', unique_muni_erased)
     
     # Append polygon fixes into erased muni layer
+    no_nulls = "DsplayName IS NOT NULL"
     print("Appending polygon fixes to erased muni layer ...")
-    arcpy.management.Append(poly_fixes, unique_muni_erased, "NO_TEST")
+    arcpy.management.Append(poly_fixes, unique_muni_erased, "NO_TEST", expression=no_nulls)
       
     # Assemble counties and cut in poly-fixed muni layer
     # Field Map county name into psap schema fields
@@ -501,7 +502,7 @@ def add_unique_psaps():
     arcpy.analysis.Erase(unique_county_temp, unique_muni_erased, unique_county_muni_temp)
     
     # Append poly-fixed muni layer into county layer with holes
-    print("Appending polygon fixes to erased muni layer ...")
+    print("Appending poly-fixed muni layer to erased county layer ...")
     arcpy.management.Append(unique_muni_erased, unique_county_muni_temp, "NO_TEST")
     
     # Loop through and populate fields with appropriate information and rename polygons
