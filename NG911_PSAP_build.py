@@ -108,12 +108,8 @@ unique_county_muni_temp = os.path.join(ng911_db, 'NG911_psap_bound_uniquecm_temp
 unique = os.path.join(ng911_db, 'NG911_PSAP_unique_UTM') # Hill AFB and NN
 unique_diss = os.path.join(ng911_db, 'NG911_PSAP_unique_diss') # Hill AFB and NN
 all_unique_temp = os.path.join(ng911_db, 'NG911_PSAP_allu_temp') # add in others before cutting in
-# combos_temp = os.path.join(ng911_db, 'NG911_psap_bound_combos_temp')
-# combos_diss = os.path.join(ng911_db, 'NG911_psap_bound_combos_diss')
-# combos_join = os.path.join(ng911_db, 'NG911_psap_bound_combos_join')
-# SOs_holes = os.path.join(ng911_db, 'NG911_psap_bound_SOs_holes')
 # psap_final = os.path.join(ng911_db, 'NG911_psap_bound_final_' + today)
-# psap_wgs84 = os.path.join(ng911_db, 'NG911_psap_bound_final_WGS84_' + today)
+psap_wgs84 = os.path.join(ng911_db, 'NG911_psap_bound_final_WGS84_' + today)
 
 fc_list = [counties, munis, single_county_temp, multi_county_temp, all_county_temp,
            mc_diss, mixed_temp, mixed_diss, all_mixed_temp, single_muni_temp, multi_muni_temp,
@@ -538,30 +534,13 @@ def add_unique_psaps():
     arcpy.analysis.Erase(all_county_muni_temp, unique_diss, all_unique_temp)
     # Append
     arcpy.management.Append(unique_diss, all_unique_temp, "NO_TEST") 
-    
-
-def correct_names():
-    # Ensure Unified PD is properly named (from remainder of Salt Lake County)
-    #            0           1           2          3            4
-    fields = ['Source', 'DateUpdate', 'State', 'Agency_ID', 'DsplayName']
-    for key in renames:
-        print(f"Updating {key} jurisdiction name ...")
-        query2 = f"Agency_ID = '{key}'"
-        print(query2)
-        print(f'new Agency_ID is: {renames[key][0]}')
-        print(f'new DsplayName is: {renames[key][1]}')
-        with arcpy.da.UpdateCursor(psap_final, fields, query2) as update_cursor:
-            for row in update_cursor:
-                row[3] = renames[key][0]
-                row[4] = renames[key][1]
-                update_cursor.updateRow(row)
        
 
 def project_to_WGS84():
     # Project final data to WGS84
     print("Projecting final psap boundaries into WGS84 ...")
     sr = arcpy.SpatialReference("WGS 1984")
-    arcpy.management.Project(psap_final, psap_wgs84, sr, "WGS_1984_(ITRF00)_To_NAD_1983")
+    arcpy.management.Project(all_unique_temp, psap_wgs84, sr, "WGS_1984_(ITRF00)_To_NAD_1983")
 
 
 ##########################
@@ -576,8 +555,7 @@ add_mixed_psaps()
 add_single_muni()
 add_multi_muni()
 add_unique_psaps()
-# correct_names()
-# project_to_WGS84()
+project_to_WGS84()
 
 print("Time elapsed in functions: {:.2f}s".format(time.time() - function_time))
 
