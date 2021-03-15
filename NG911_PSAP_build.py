@@ -39,7 +39,8 @@ counties = os.path.join(ng911_db, f'SGID_counties_{today}')
 SGID_munis = os.path.join(SGID, 'SGID.BOUNDARIES.Municipalities')
 munis = os.path.join(ng911_db, f'SGID_munis_{today}')
 unique = os.path.join(ng911_db, 'NG911_PSAP_unique_UTM')
-psap_schema = os.path.join(ng911_db, 'NG911_PSAP_schema_simple')
+# psap_schema = os.path.join(ng911_db, 'NG911_PSAP_Schema_simple')
+psap_schema = os.path.join(ng911_db, 'NG911_PSAP_Schema')
 psap_working = os.path.join(ng911_db, f'NG911_PSAP_bound_working_{today}')
 
 # Read in CSV of PSAP info into pandas dataframe, use df to build dictionaries
@@ -534,7 +535,25 @@ def add_unique_psaps():
     arcpy.analysis.Erase(all_county_muni_temp, unique_diss, all_unique_temp)
     # Append
     arcpy.management.Append(unique_diss, all_unique_temp, "NO_TEST") 
-       
+     
+    
+def calc_fields(): 
+    # Loop through and populate fields with appropriate information and rename polygons
+    update_count = 0
+        #          0           1           2           3          4            5           6
+    fields = ['DsplayName', 'Source', 'DateUpdate', 'State', 'ServiceNum', 'ES_NGUID', 'OBJECTID']
+    with arcpy.da.UpdateCursor(all_unique_temp, fields) as update_cursor:
+        print("Looping through rows in FC ...")
+        for row in update_cursor:
+            row[1] = 'UGRC'
+            row[2] = datetime.now()
+            row[3] = 'UT'
+            row[4] = '911'
+            row[5] = f'PSAP{row[6]}@gis.utah.gov'
+            update_count += 1
+            update_cursor.updateRow(row)
+    print(f"Total count of unique PSAP updates is: {update_count}")
+    
 
 def project_to_WGS84():
     # Project final data to WGS84
@@ -555,6 +574,7 @@ add_mixed_psaps()
 add_single_muni()
 add_multi_muni()
 add_unique_psaps()
+calc_fields()
 project_to_WGS84()
 
 print("Time elapsed in functions: {:.2f}s".format(time.time() - function_time))
