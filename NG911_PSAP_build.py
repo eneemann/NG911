@@ -538,7 +538,7 @@ def add_unique_psaps():
      
     
 def calc_fields(): 
-    # Loop through and populate fields with appropriate information and rename polygons
+    # Loop through and populate fields with appropriate information
     update_count = 0
         #          0           1           2           3          4            5           6
     fields = ['DsplayName', 'Source', 'DateUpdate', 'State', 'ServiceNum', 'ES_NGUID', 'OBJECTID']
@@ -552,7 +552,7 @@ def calc_fields():
             row[5] = f'PSAP{row[6]}@gis.utah.gov'
             update_count += 1
             update_cursor.updateRow(row)
-    print(f"Total count of unique PSAP updates is: {update_count}")
+    print(f"Total count of attribute updates is: {update_count}")
     
 
 def project_to_WGS84():
