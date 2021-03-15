@@ -22,7 +22,8 @@ print("The script start time is {}".format(readable_start))
 
 # Set up databases (SGID must be changed based on user's path)
 SGID = r"C:\Users\eneemann\AppData\Roaming\ESRI\ArcGISPro\Favorites\internal@SGID@internal.agrc.utah.gov.sde"
-ng911_db = r"\\itwfpcap2\AGRC\agrc\data\ng911\NG911_boundary_work.gdb"
+# ng911_db = r"\\itwfpcap2\AGRC\agrc\data\ng911\NG911_boundary_work.gdb"
+ng911_db = r"C:\Users\eneemann\Desktop\Neemann\NG911\NG911_project\NG911_boundary_work_testing.gdb"
 #ng911_db = r"C:\Users\eneemann\Desktop\Neemann\NG911\NG911_project\NG911_project.gdb"
 
 
@@ -114,18 +115,10 @@ def add_sheriff():
     fms = arcpy.FieldMappings()
     
     # NAME to DsplayName
-    fm_name = arcpy.FieldMap()
-    fm_name.addInputField("county_lyr", "NAME")
-    output = fm_name.outputField
-    output.name = "DsplayName"
-    fm_name.outputField = output
-    fms.addFieldMap(fm_name)
-    
-    # NAME to Agency_ID
     fm_agency = arcpy.FieldMap()
     fm_agency.addInputField("county_lyr", "NAME")
     output = fm_agency.outputField
-    output.name = "Agency_ID"
+    output.name = "DsplayName"
     fm_agency.outputField = output
     fms.addFieldMap(fm_agency)
     
@@ -134,16 +127,15 @@ def add_sheriff():
     
     # Populate fields with information
     update_count = 0
-    #            0           1           2          3            4
-    fields = ['Source', 'DateUpdate', 'State', 'Agency_ID', 'DsplayName']
+    #            0           1           2          3
+    fields = ['Source', 'DateUpdate', 'State', 'DsplayName']
     with arcpy.da.UpdateCursor("working_lyr", fields) as update_cursor:
         print("Looping through rows in FC ...")
         for row in update_cursor:
             row[0] = 'AGRC'
             row[1] = datetime.now()
             row[2] = 'UT'
-            row[3] = row[3] + ' COUNTY SO'
-            row[4] = row[4] + ' COUNTY SHERIFFS OFFICE'
+            row[3] = row[3] + ' COUNTY SHERIFFS OFFICE'
             update_count += 1
             update_cursor.updateRow(row)
     print("Total count of updates is: {}".format(update_count))
@@ -166,37 +158,28 @@ def add_muni_pds():
     fms = arcpy.FieldMappings()
     
     # NAME to DsplayName
-    fm_name = arcpy.FieldMap()
-    fm_name.addInputField("muni_lyr", "NAME")
-    output = fm_name.outputField
-    output.name = "DsplayName"
-    fm_name.outputField = output
-    fms.addFieldMap(fm_name)
-    
-    # NAME to Agency_ID
     fm_agency = arcpy.FieldMap()
     fm_agency.addInputField("muni_lyr", "NAME")
     output = fm_agency.outputField
-    output.name = "Agency_ID"
+    output.name = "DsplayName"
     fm_agency.outputField = output
     fms.addFieldMap(fm_agency)
     
     # Complete the append with field mapping
     arcpy.management.Append("muni_lyr", "working_lyr_2", "NO_TEST", field_mapping=fms)
-    # now munis are in law schema with only Agency_ID and DsplayName populated (sk_lyr_2, PDs_temp)
+    # now munis are in law schema with only DsplayName populated (sk_lyr_2, PDs_temp)
     
     # Populate fields with information
     update_count = 0
-    #            0           1           2          3            4
-    fields = ['Source', 'DateUpdate', 'State', 'Agency_ID', 'DsplayName']
+    #            0           1           2          3
+    fields = ['Source', 'DateUpdate', 'State', 'DsplayName']
     with arcpy.da.UpdateCursor("working_lyr_2", fields) as update_cursor:
         print("Looping through rows in FC ...")
         for row in update_cursor:
             row[0] = 'AGRC'
             row[1] = datetime.now()
             row[2] = 'UT'
-            row[3] = row[3].upper() + ' PD'
-            row[4] = row[4].upper() + ' POLICE DEPARTMENT'
+            row[3] = row[3].upper() + ' POLICE DEPARTMENT'
             update_count += 1
             update_cursor.updateRow(row)
     print("Total count of updates is: {}".format(update_count))
@@ -205,14 +188,14 @@ def add_muni_pds():
 def add_combos():
     # Dissolve jurisdictions with multiple polygons (Draper, Park City, Santaquin)
     print("Dissolving jurisdictions that cross county boundaries ...")
-    arcpy.management.Dissolve(PDs_temp, PDs_diss, "Agency_ID")
+    arcpy.management.Dissolve(PDs_temp, PDs_diss, "DsplayName")
     
     # Add fields back in with attribute join
     arcpy.management.CopyFeatures(PDs_diss, PDs_join)
     fields_list = ['Source', 'DateUpdate', 'Effective', 'Expire', 'ES_NGUID', 'State',
                    'ServiceURI', 'ServiceURN', 'ServiceNum', 'AVcard_URI', 'DsplayName']
     print(fields_list)
-    arcpy.management.JoinField(PDs_join, "Agency_ID", PDs_temp, "Agency_ID", fields_list)
+    arcpy.management.JoinField(PDs_join, "DsplayName", PDs_temp, "DsplayName", fields_list)
     
     
     # Build combo jurisdictions
@@ -234,18 +217,10 @@ def add_combos():
     fms = arcpy.FieldMappings()
     
     # NAME to DsplayName
-    fm_name = arcpy.FieldMap()
-    fm_name.addInputField("muni_lyr_3", "NAME")
-    output = fm_name.outputField
-    output.name = "DsplayName"
-    fm_name.outputField = output
-    fms.addFieldMap(fm_name)
-    
-    # NAME to Agency_ID
     fm_agency = arcpy.FieldMap()
     fm_agency.addInputField("muni_lyr_3", "NAME")
     output = fm_agency.outputField
-    output.name = "Agency_ID"
+    output.name = "DsplayName"
     fm_agency.outputField = output
     fms.addFieldMap(fm_agency)
     
@@ -253,11 +228,11 @@ def add_combos():
     arcpy.management.Append("muni_lyr_3", "working_lyr_3", "NO_TEST", field_mapping=fms)
     
     # Loop through and populate fields with appropriate information and rename to combo jurisdictions (All)
-    #            0           1           2          3            4   
-    fields = ['Source', 'DateUpdate', 'State', 'Agency_ID', 'DsplayName']
+    #            0           1           2          3   
+    fields = ['Source', 'DateUpdate', 'State', 'DsplayName']
     for key in combos:
         temp_list = [ item.title() for item in combos[key] ]
-        query1 = f"Agency_ID IN ({temp_list})".replace('[', '').replace(']', '')
+        query1 = f"DsplayName IN ({temp_list})".replace('[', '').replace(']', '')
         print(query1)
         print(f"Updating {key} jurisdication ...")
         with arcpy.da.UpdateCursor("working_lyr_3", fields, query1) as update_cursor:
@@ -265,16 +240,15 @@ def add_combos():
                 row[0] = 'AGRC'
                 row[1] = datetime.now()
                 row[2] = 'UT'
-                row[3] = key
-                row[4] = key.replace(' PD', ' POLICE DEPARTMENT')
+                row[3] = key.replace(' PD', ' POLICE DEPARTMENT')
                 update_cursor.updateRow(row)
         
     print("Dissolving combo jurisdications ...")
-    arcpy.management.Dissolve(combos_temp, combos_diss, "Agency_ID")
+    arcpy.management.Dissolve(combos_temp, combos_diss, "DsplayName")
     
     # Attempt with attribute join
     arcpy.management.CopyFeatures(combos_diss, combos_join)
-    arcpy.management.JoinField(combos_join, "Agency_ID", combos_temp, "Agency_ID", fields_list)
+    arcpy.management.JoinField(combos_join, "DsplayName", combos_temp, "DsplayName", fields_list)
     
     # Append combo jurisdictions into PDs layer
     print("Adding combo jurisdictions into PDs layer ...")
@@ -299,20 +273,36 @@ def add_unique_pds():
 
 def correct_names():
     # Ensure Unified PD is properly named (from remainder of Salt Lake County)
-    #            0           1           2          3            4
-    fields = ['Source', 'DateUpdate', 'State', 'Agency_ID', 'DsplayName']
+    #            0           1           2          3
+    fields = ['Source', 'DateUpdate', 'State', 'DsplayName']
     for key in renames:
         print(f"Updating {key} jurisdiction name ...")
-        query2 = f"Agency_ID = '{key}'"
+        query2 = f"DsplayName = '{key}'"
         print(query2)
-        print(f'new Agency_ID is: {renames[key][0]}')
         print(f'new DsplayName is: {renames[key][1]}')
         with arcpy.da.UpdateCursor(law_final, fields, query2) as update_cursor:
             for row in update_cursor:
-                row[3] = renames[key][0]
-                row[4] = renames[key][1]
+                row[3] = renames[key][1]
                 update_cursor.updateRow(row)
-       
+
+        
+def calc_fields(): 
+    # Loop through and populate fields with appropriate information
+    update_count = 0
+        #          0           1           2           3          4            5           6
+    fields = ['DsplayName', 'Source', 'DateUpdate', 'State', 'ServiceNum', 'ES_NGUID', 'OBJECTID']
+    with arcpy.da.UpdateCursor(law_final, fields) as update_cursor:
+        print("Looping through rows in FC ...")
+        for row in update_cursor:
+            row[1] = 'UGRC'
+            row[2] = datetime.now()
+            row[3] = 'UT'
+            row[4] = '911'
+            row[5] = f'LAW{row[6]}@gis.utah.gov'
+            update_count += 1
+            update_cursor.updateRow(row)
+    print(f"Total count of attribute updates is: {update_count}")
+
 
 def project_to_WGS84():
     # Project final data to WGS84
@@ -336,6 +326,7 @@ add_muni_pds()
 add_combos()
 add_unique_pds()
 correct_names()
+calc_fields()
 project_to_WGS84()
 
 print("Script shutting down ...")
