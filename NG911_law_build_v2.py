@@ -132,7 +132,7 @@ def add_sheriff():
     with arcpy.da.UpdateCursor("working_lyr", fields) as update_cursor:
         print("Looping through rows in FC ...")
         for row in update_cursor:
-            row[0] = 'AGRC'
+            row[0] = 'UGRC'
             row[1] = datetime.now()
             row[2] = 'UT'
             row[3] = row[3] + ' COUNTY SHERIFFS OFFICE'
@@ -176,7 +176,7 @@ def add_muni_pds():
     with arcpy.da.UpdateCursor("working_lyr_2", fields) as update_cursor:
         print("Looping through rows in FC ...")
         for row in update_cursor:
-            row[0] = 'AGRC'
+            row[0] = 'UGRC'
             row[1] = datetime.now()
             row[2] = 'UT'
             row[3] = row[3].upper() + ' POLICE DEPARTMENT'
@@ -237,7 +237,7 @@ def add_combos():
         print(f"Updating {key} jurisdication ...")
         with arcpy.da.UpdateCursor("working_lyr_3", fields, query1) as update_cursor:
             for row in update_cursor:
-                row[0] = 'AGRC'
+                row[0] = 'UGRC'
                 row[1] = datetime.now()
                 row[2] = 'UT'
                 row[3] = key.replace(' PD', ' POLICE DEPARTMENT')
