@@ -10,6 +10,7 @@ import arcpy
 import os
 import time
 from datetime import datetime
+import pandas as pd
 
 # Start timer and print start time in UTC
 start_time = time.time()
@@ -36,7 +37,7 @@ today = time.strftime("%Y%m%d")
 counties = os.path.join(SGID, 'SGID.BOUNDARIES.Counties')
 munis = os.path.join(SGID, 'SGID.BOUNDARIES.Municipalities')
 unique = os.path.join(ng911_db, 'NG911_Law_unique_UTM')
-law_schema = os.path.join(ng911_db, 'NG911_Law_schema')
+law_schema = os.path.join(ng911_db, 'NG911_Law_schema_SGID')
 law_working = os.path.join(ng911_db, 'NG911_Law_bound_working_' + today)
 
 # Read in text file of municipalities with PDs
@@ -86,6 +87,16 @@ for item in rename_temp:
     renames[first] = parts
 print(renames)
 
+# Read in CSV of NGUIDs for Law agencies
+print("Reading in CSV to get NGUIDs ...")
+# textfile_dir = r'C:\Users\eneemann\Desktop\Neemann\NG911\NG911_project'
+csv = os.path.join(textfile_dir, 'law_nguid.csv')
+law_df = pd.read_csv(csv)
+
+# Create dictionary for Law NGUIDs
+nguid_dict = law_df.set_index('DsplayName').to_dict()['ES_NGUID']
+
+
 # Set up more variables for intermediate and final feature classes
 SOs_temp = os.path.join(ng911_db, 'NG911_law_bound_SOs_temp')
 PDs_temp = os.path.join(ng911_db, 'NG911_law_bound_PDs_temp')
@@ -127,14 +138,15 @@ def add_sheriff():
     
     # Populate fields with information
     update_count = 0
-    #            0           1           2          3
-    fields = ['Source', 'DateUpdate', 'State', 'DsplayName']
+    #            0           1           2          3           4
+    fields = ['Source', 'DateUpdate', 'State', 'DsplayName', 'NAME']
     with arcpy.da.UpdateCursor("working_lyr", fields) as update_cursor:
         print("Looping through rows in FC ...")
         for row in update_cursor:
             row[0] = 'UGRC'
             row[1] = datetime.now()
             row[2] = 'UT'
+            row[4] = row[3] + ' COUNTY SO'
             row[3] = row[3] + ' COUNTY SHERIFFS OFFICE'
             update_count += 1
             update_cursor.updateRow(row)
@@ -228,7 +240,7 @@ def add_combos():
     arcpy.management.Append("muni_lyr_3", "working_lyr_3", "NO_TEST", field_mapping=fms)
     
     # Loop through and populate fields with appropriate information and rename to combo jurisdictions (All)
-    #            0           1           2          3   
+    #            0           1           2          3
     fields = ['Source', 'DateUpdate', 'State', 'DsplayName']
     for key in combos:
         temp_list = [ item.title() for item in combos[key] ]
@@ -289,8 +301,8 @@ def correct_names():
 def calc_fields(): 
     # Loop through and populate fields with appropriate information
     update_count = 0
-        #          0           1           2           3          4            5           6
-    fields = ['DsplayName', 'Source', 'DateUpdate', 'State', 'ServiceNum', 'ES_NGUID', 'OBJECTID']
+        #          0           1           2           3          4            5           6         7 
+    fields = ['DsplayName', 'Source', 'DateUpdate', 'State', 'ServiceNum', 'ES_NGUID', 'OBJECTID', 'NAME']
     with arcpy.da.UpdateCursor(law_final, fields) as update_cursor:
         print("Looping through rows in FC ...")
         for row in update_cursor:
@@ -298,7 +310,14 @@ def calc_fields():
             row[2] = datetime.now()
             row[3] = 'UT'
             row[4] = '911'
-            row[5] = f'LAW{row[6]}@gis.utah.gov'
+#            row[5] = f'LAW{row[6]}@gis.utah.gov'
+            row[5] = nguid_dict[f'{row[0]}']
+            if 'POLICE DEPARTMENT' in row[0]:
+                row[7] = row[0].replace('POLICE DEPARTMENT', 'PD')
+            elif 'SHERIFFS OFFICE' in row[0]:
+                row[7] = row[0].replace('SHERIFFS OFFICE', 'SO')
+            else:
+                row[7] = row[0]
             update_count += 1
             update_cursor.updateRow(row)
     print(f"Total count of attribute updates is: {update_count}")
