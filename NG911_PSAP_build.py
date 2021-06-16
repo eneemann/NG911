@@ -86,6 +86,19 @@ unique_muni_df = unique.dropna(subset=['Munis'])
 unique_county_dict = unique_county_df.set_index('PSAP').to_dict()['Counties']
 unique_muni_dict = unique_muni_df.set_index('PSAP').to_dict()['Munis']
 
+# Read in CSV of NGUIDs for PSAPs
+print("Reading in CSV to get NGUIDs ...")
+# textfile_dir = r'C:\Users\eneemann\Desktop\Neemann\NG911\NG911_project'
+psap_csv = os.path.join(textfile_dir, 'psap_nguid.csv')
+psap_df = pd.read_csv(psap_csv)
+
+# Create dictionary for PSAP NGUIDs
+nguid_dict = psap_df.set_index('DsplayName').to_dict()['ES_NGUID']
+
+# Set up variables for static table and feature class
+sgid_data_table = os.path.join(ng911_db, 'SGID_PSAP_data_to_join_20210616')
+unique = os.path.join(ng911_db, 'NG911_PSAP_unique_UTM') # Hill AFB and NN
+
 # Set up more variables for intermediate and final feature classes
 single_county_temp = os.path.join(ng911_db, 'NG911_psap_bound_sc_temp')
 multi_county_temp = os.path.join(ng911_db, 'NG911_psap_bound_mc_temp')
@@ -105,12 +118,10 @@ unique_muni_temp = os.path.join(ng911_db, 'NG911_PSAP_um_temp')
 unique_muni_erased = os.path.join(ng911_db, 'NG911_PSAP_um_erased')
 unique_county_temp = os.path.join(ng911_db, 'NG911_PSAP_uc_temp')
 unique_county_muni_temp = os.path.join(ng911_db, 'NG911_psap_bound_uniquecm_temp')
-
-unique = os.path.join(ng911_db, 'NG911_PSAP_unique_UTM') # Hill AFB and NN
 unique_diss = os.path.join(ng911_db, 'NG911_PSAP_unique_diss') # Hill AFB and NN
 all_unique_temp = os.path.join(ng911_db, 'NG911_PSAP_allu_temp') # add in others before cutting in
-# psap_final = os.path.join(ng911_db, 'NG911_psap_bound_final_' + today)
-psap_wgs84 = os.path.join(ng911_db, 'NG911_psap_bound_final_WGS84_' + today)
+sgid_final = os.path.join(ng911_db, 'NG911_psap_bound_final_sgid_' + today) # create version for SGID
+psap_wgs84 = os.path.join(ng911_db, 'NG911_psap_bound_final_WGS84_' + today) # creat version for NG911
 
 fc_list = [counties, munis, single_county_temp, multi_county_temp, all_county_temp,
            mc_diss, mixed_temp, mixed_diss, all_mixed_temp, single_muni_temp, multi_muni_temp,
@@ -549,7 +560,8 @@ def calc_fields():
             row[2] = datetime.now()
             row[3] = 'UT'
             row[4] = '911'
-            row[5] = f'PSAP{row[6]}@gis.utah.gov'
+#            row[5] = f'PSAP{row[6]}@gis.utah.gov'
+            row[5] = nguid_dict[f'{row[0]}']
             update_count += 1
             update_cursor.updateRow(row)
     print(f"Total count of attribute updates is: {update_count}")
@@ -560,6 +572,19 @@ def project_to_WGS84():
     print("Projecting final psap boundaries into WGS84 ...")
     sr = arcpy.SpatialReference("WGS 1984")
     arcpy.management.Project(all_unique_temp, psap_wgs84, sr, "WGS_1984_(ITRF00)_To_NAD_1983")
+    
+    
+def build_sgid():
+    if arcpy.Exists(sgid_final):
+        arcpy.management.Delete(sgid_final)
+    
+    joined_data = arcpy.management.JoinField(all_unique_temp, "DsplayName", sgid_data_table, "DsplayName")
+    # Remove extra field from join
+    arcpy.management.DeleteField(all_unique_temp, "DsplayName_1")
+    
+    # Copy sgid data table to all_unique_temp feature class
+    # This is a copy of the PSAP Boundaries feature class with all fields for SGID
+    arcpy.management.CopyFeatures(joined_data, sgid_final)
 
 
 ##########################
@@ -576,6 +601,7 @@ add_multi_muni()
 add_unique_psaps()
 calc_fields()
 project_to_WGS84()
+build_sgid()
 
 print("Time elapsed in functions: {:.2f}s".format(time.time() - function_time))
 
