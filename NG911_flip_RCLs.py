@@ -32,8 +32,9 @@ arcpy.env.qualifiedFieldNames = False
 
 today = time.strftime("%Y%m%d")
 
-RCLs = os.path.join(ng911_db, 'Davis_Road_errors_20210815_v3')
-RCLs_working = os.path.join(ng911_db, f'Davis_rd_error_20210815_fixes_{today}')
+#RCLs = os.path.join(ng911_db, 'Davis_Road_errors_20210815_v3')
+RCLs = os.path.join(ng911_db, 'RoadCenterlines')
+RCLs_working = os.path.join(ng911_db, f'RCL_flip_fixes_{today}')
 
 # Make a copy of the data to work on
 arcpy.management.CopyFeatures(RCLs, RCLs_working)
@@ -97,7 +98,7 @@ def reverse_line(line):
     
 
 # Loop through data and flip roads that have bad directions
-update_count = 0
+flip_count = 0
 query = "Error_ID = 512"
     #          0                  1                 2                3            4         5            6
 fields = ['RCL_NGUID', 'Feature_Description', 'Error_Detail', 'Error_Status', 'SHAPE@', 'OBJECTID', 'St_PreDir']
@@ -118,11 +119,11 @@ with arcpy.da.UpdateCursor(RCLs_working, fields, query) as update_cursor:
             row[4] = shape_rev
             row[2] = f'python flipped {predir} {round(ang, 1)}'
             row[3] = 'Closed'
-            update_count += 1
+            flip_count += 1
         else:
             row[2] = f'ok {predir} {round(ang, 1)}'
         update_cursor.updateRow(row)
-print(f"Total count of flipped segments is: {update_count}")
+print(f"Total count of flipped segments is: {flip_count}")
 
 
 ##########################
