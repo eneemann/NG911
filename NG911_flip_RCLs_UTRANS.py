@@ -57,13 +57,13 @@ def reversed_check(line, predir):
     
     # Compare angle to expected range based on predir
     # If angle doesn't align with predir, change status to True
-    if predir == 'NORTH' and (angle > 90 and angle < 270):
+    if predir == 'N' and (angle > 90 and angle < 270):
         status = True
-    elif predir == 'SOUTH' and (angle > 270 or angle < 90):
+    elif predir == 'S' and (angle > 270 or angle < 90):
         status = True
-    elif predir == 'EAST' and (angle > 180 and angle < 360):
+    elif predir == 'E' and (angle > 180 and angle < 360):
         status = True
-    elif predir == 'WEST' and (angle > 0 and angle < 180):
+    elif predir == 'W' and (angle > 0 and angle < 180):
         status = True
     
 #    if not status:
@@ -135,13 +135,13 @@ with arcpy.da.UpdateCursor(RCLs, fields) as update_cursor:
         
         checks += 1
         if is_reversed:
-            print(f"flipping OBJECTID {row[0]}")
+            print("flipping OBJECTID {}".format(row[0]))
             shape_rev, multipart = reverse_line(shape_obj)
-            if multipart:
-                print("OBJECTID {} has multiple parts!".format(row[4]))
-                multi_parts.append(row[4])
-                continue
-            row[1] = shape_rev
+#            if multipart:
+#                print("OBJECTID {} has multiple parts!".format(row[4]))
+#                multi_parts.append(row[4])
+#                continue
+#            row[1] = shape_rev
             row[3] = 'python flip: {0} {1}'.format(predir, round(ang, 1))
             flip_count += 1
             flips.append(row[4])
