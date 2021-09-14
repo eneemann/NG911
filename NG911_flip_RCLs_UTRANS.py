@@ -135,19 +135,19 @@ with arcpy.da.UpdateCursor(RCLs, fields) as update_cursor:
         
         checks += 1
         if is_reversed:
-#            print(f"flipping OBJECTID {row[0]}")
+            print(f"flipping OBJECTID {row[0]}")
             shape_rev, multipart = reverse_line(shape_obj)
-#            if multipart:
-#                print("OBJECTID {} has multiple parts!".format(row[4]))
-#                multi_parts.append(row[4])
-#                continue
-#            row[1] = shape_rev
-#            row[3] = 'python flip: {0} {1}'.format(predir, round(ang, 1))
+            if multipart:
+                print("OBJECTID {} has multiple parts!".format(row[4]))
+                multi_parts.append(row[4])
+                continue
+            row[1] = shape_rev
+            row[3] = 'python flip: {0} {1}'.format(predir, round(ang, 1))
             flip_count += 1
             flips.append(row[4])
 #        else:
 #            row[3] = f'ok {predir} {round(ang, 1)}'
-#        update_cursor.updateRow(row)
+        update_cursor.updateRow(row)
 print("Total number of checks is: {}".format(checks))
 print("Total count of flipped segments is: {}".format(flip_count))
 print("Total count of multipart segments is: {}".format(len(multi_parts)))
