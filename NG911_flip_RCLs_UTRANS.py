@@ -105,6 +105,7 @@ edit.startOperation()
 # Loop through data and flip roads that have bad directions
 multi_parts = []
 flips = []
+checks = 0
 flip_count = 0
 multi_count = 0
     #          0           1          2             3          4           5           6
@@ -132,6 +133,7 @@ with arcpy.da.UpdateCursor(RCLs, fields) as update_cursor:
         
         is_reversed, ang = reversed_check(shape_obj, predir)
         
+        checks += 1
         if is_reversed:
 #            print(f"flipping OBJECTID {row[0]}")
             shape_rev, multipart = reverse_line(shape_obj)
@@ -146,6 +148,7 @@ with arcpy.da.UpdateCursor(RCLs, fields) as update_cursor:
 #        else:
 #            row[3] = f'ok {predir} {round(ang, 1)}'
 #        update_cursor.updateRow(row)
+print("Total number of checks is: {}".format(checks))
 print("Total count of flipped segments is: {}".format(flip_count))
 print("Total count of multipart segments is: {}".format(len(multi_parts)))
 
