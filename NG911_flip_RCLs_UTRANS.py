@@ -57,14 +57,24 @@ def reversed_check(line, predir):
     
     # Compare angle to expected range based on predir
     # If angle doesn't align with predir, change status to True
-    if predir == 'N' and (angle > 90 and angle < 270):
+#    if predir == 'N' and (angle > 90 and angle < 270):
+#        status = True
+#    elif predir == 'S' and (angle > 270 or angle < 90):
+#        status = True
+#    elif predir == 'E' and (angle > 180 and angle < 360):
+#        status = True
+#    elif predir == 'W' and (angle > 0 and angle < 180):
+#        status = True
+    
+    if predir == 'N' and (angle > 100 and angle < 260):
         status = True
-    elif predir == 'S' and (angle > 270 or angle < 90):
+    elif predir == 'S' and (angle > 280 or angle < 80):
         status = True
-    elif predir == 'E' and (angle > 180 and angle < 360):
+    elif predir == 'E' and (angle > 190 and angle < 350):
         status = True
-    elif predir == 'W' and (angle > 0 and angle < 180):
+    elif predir == 'W' and (angle > 10 and angle < 170):
         status = True
+    
     
 #    if not status:
 #        print(f'predir is {predir}, angle is {angle}')
@@ -108,9 +118,10 @@ flips = []
 checks = 0
 flip_count = 0
 multi_count = 0
+query = "TOADDR_L <> 0 AND TOADDR_R <> 0"
     #          0           1          2             3          4           5           6
 fields = ['UNIQUE_ID', 'SHAPE@', 'PREDIR', 'UTRANS_NOTES', 'OBJECTID', 'TOADDR_L', 'TOADDR_R']
-with arcpy.da.UpdateCursor(RCLs, fields) as update_cursor:
+with arcpy.da.UpdateCursor(RCLs, fields, query) as update_cursor:
     print("Looping through rows in FC to check for flipped segments ...")
     for row in update_cursor:
         if row[4] % 10000 == 0:
