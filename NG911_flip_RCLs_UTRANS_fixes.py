@@ -118,7 +118,8 @@ checks = 0
 flip_count = 0
 multi_count = 0
 
-query = "TOADDR_L <> 0 AND TOADDR_R <> 0"
+#query = "TOADDR_L <> 0 AND TOADDR_R <> 0"
+query = "UTRANS_NOTES LIKE '%python flip%'"
     #          0           1          2             3          4           5           6
 fields = ['UNIQUE_ID', 'SHAPE@', 'PREDIR', 'UTRANS_NOTES', 'OBJECTID', 'TOADDR_L', 'TOADDR_R']
 with arcpy.da.UpdateCursor(RCLs, fields, query) as update_cursor:
@@ -152,12 +153,12 @@ with arcpy.da.UpdateCursor(RCLs, fields, query) as update_cursor:
 #                print("OBJECTID {} has multiple parts!".format(row[4]))
 #                multi_parts.append(row[4])
 #                continue
-#            row[1] = shape_rev
-#            row[3] = 'python flip: {0} {1}'.format(predir, round(ang, 1))
+            row[1] = shape_rev
+            row[3] = 'python flip: {0} {1}'.format(predir, round(ang, 1))
             flip_count += 1
             flips.append(row[4])
-#        else:
-#            row[3] = f'ok {predir} {round(ang, 1)}'
+        else:
+            row[3] = 'might need flipped: {0} {1}'.format(predir, round(ang, 1))
         update_cursor.updateRow(row)
 print("Total number of checks is: {}".format(checks))
 print("Total count of flipped segments is: {}".format(flip_count))
