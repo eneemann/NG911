@@ -96,9 +96,6 @@ def reverse_line(line):
         pts_orig.append((pnt.X, pnt.Y))
     pts_rev = pts_orig[::-1]
     
-    #            print(pts_orig)
-    #            print(pts_rev)
-    
     # rebuild geometry of reversed line
     arc_pts = [arcpy.Point(item[0], item[1]) for item in pts_rev]
     array= arcpy.Array(arc_pts)
@@ -128,9 +125,6 @@ with arcpy.da.UpdateCursor(RCLs, fields, query) as update_cursor:
             print('working on OBJECTID: {}'.format(row[4]))
         if row[5] == 0 and row[6] == 0:
             continue
-#        if row[5] == 4:
-#         if row[4] > 210000:
-#             print(row[4])
         shape_obj = row[1]
         predir = row[2]
         if shape_obj.partCount > 1:
@@ -138,9 +132,6 @@ with arcpy.da.UpdateCursor(RCLs, fields, query) as update_cursor:
             multi_parts.append(row[4])
             multi_count += 1
             continue
-            
-#        print(shape_obj)
-#       print(f'part count: {shape_obj.partCount}')
         
         is_reversed, ang = reversed_check(shape_obj, predir)
         
@@ -148,11 +139,7 @@ with arcpy.da.UpdateCursor(RCLs, fields, query) as update_cursor:
         if is_reversed:
             print("flipping OBJECTID {}".format(row[0]))
             shape_rev, multipart = reverse_line(shape_obj)
-#            if multipart:
-#                print("OBJECTID {} has multiple parts!".format(row[4]))
-#                multi_parts.append(row[4])
-#                continue
-#            row[1] = shape_rev
+            row[1] = shape_rev
             row[3] = 'python flip: {0} {1}'.format(predir, round(ang, 1))
             flip_count += 1
             flips.append(row[4])
