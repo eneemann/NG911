@@ -37,8 +37,8 @@ addpts = os.path.join(ng911_db, r'AddressPoints')
 addpts_working = os.path.join(error_db, f'AddressPoints_errors_{today}')
 
 ## Make a copy of the data to work on
-#arcpy.management.CopyFeatures(addpts, addpts_working)
-#arcpy.AddField_management(addpts_working, "Error_UGRC", "TEXT", "", "", 100)
+arcpy.management.CopyFeatures(addpts, addpts_working)
+arcpy.AddField_management(addpts_working, "Error_UGRC", "TEXT", "", "", 100)
 
 print("Time elapsed: {:.2f}s".format(time.time() - start_time)) 
 
@@ -63,6 +63,8 @@ if description['hasOID']:
     skip_fields.append(description['OIDFieldName'])
 
 fields = [field.name for field in description['fields'] if field.name not in skip_fields]
+mandatory_fields = ['Site_NGUID', 'State', 'County', 'Add_Number', 'LSt_Name', 'MSAGComm']
+empties = [None, 'none', 'null', '', ' ', '  ']
 
 #: Add OID and Error_UGRC at the end, so we can ignore them in the hash
 fields.append('OID@')
@@ -98,8 +100,10 @@ duplicate_count = 0
 required_count = 0
 print("Looping through rows in FC ...")
 with arcpy.da.UpdateCursor(addpts_working, fields) as update_cursor:
+    mandatory_idx = [fields.index(item) for item in fields if item in mandatory_fields]
     for row in update_cursor:
 #        shape_wkt = row[shapefield_index]
+        comment = None
         object_id = row[oid_index]
         if object_id % 100000 == 0:
             print(f'working on OBJECTID: {object_id}')
@@ -121,29 +125,25 @@ with arcpy.da.UpdateCursor(addpts_working, fields) as update_cursor:
         digests.add(digest)
         
         # check mandatory fields
+        row_mandatory = [row[i] for i in mandatory_idx]
+        if any(val is None or str(val).strip().casefold() in empties for val in row_mandatory):
+            oids_with_issues.append(object_id)
+            required_count += 1
+            if comment is None or comment in ('', ' '):
+                comment = 'required value missing'
+            else:
+                comment += ', required value missing'
         
-        
-        oids_with_issues.append(object_id)
-        required_count += 1
-        
-        if comment is None or comment in ('', ' '):
-            comment = 'required value missing'
-        else:
-            comment += ', required value missing'
         row[notes_index] = comment
         update_cursor.updateRow(row)
 
-print(f"Total count of attribute duplicates is: {duplicate_count} or {round(duplicate_count/addr_count, 3}%")
-print(f"Total count of rows missing required value: {required_count} or {round(required_count/addr_count, 3}%")
+print(f"Total count of attribute duplicates is: {duplicate_count} or {round(duplicate_count/addr_count, 3)}%")
+print(f"Total count of rows missing required value: {required_count} or {round(required_count/addr_count, 3)}%")
 
 oid_set = set(oids_with_issues)
 print('\nSelect statement to view errors in ArcGIS:')
 sql = f'OBJECTID IN ({", ".join([str(oid) for oid in oid_set])})'
 print(sql)
-
-# Check for missing required fields
-    
-'required value missing'
 
 
 ##query = "TOADDR_L <> 0 AND TOADDR_R <> 0"
@@ -211,6 +211,9 @@ print("Time elapsed: {:.2f}s".format(time.time() - start_time))
 #if not test or test.strip().casefold() in ('none', 'null', '', ' ', '  '):
 #    print('yes it is "empty"')
     
-
-
-    
+#mandatory_idx = [fields.index(item) for item in fields if item in mandatory_fields]
+#row_mandatory = [fields[i] for i in mandatory_idx]
+#
+#fields.index(mandatory_fields)
+#
+#row_mandatory = [item for item in fields if item in mandatory_fields]
