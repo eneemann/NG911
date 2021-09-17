@@ -31,6 +31,8 @@ today = time.strftime("%Y%m%d")
 
 addpts = os.path.join(ng911_db, r'AddressPoints')
 addpts_working = os.path.join(error_db, f'AddressPoints_errors_{today}')
+addpts_final = os.path.join(error_db, f'AddressPoints_errors_only_{today}')
+addpts_final_name = f'AddressPoints_errors_only_{today}'
 
 ## Make a copy of the data to work on
 arcpy.management.CopyFeatures(addpts, addpts_working)
@@ -111,7 +113,10 @@ print(f"Total count of rows missing required value: {required_count} or {round((
 #sql = f'OBJECTID IN ({", ".join([str(oid) for oid in oid_set])})'
 #print(sql)
 
-
+# Create copy with only points containing errors
+print('Exporting features with errors in separate feature class ...')
+where_clause = """Error_UGRC IS NOT NULL"""
+arcpy.conversion.FeatureClassToFeatureClass(addpts_working, error_db. addpts_final_name, where_clause)
 
 ##########################
 #  Call Functions Below  #
