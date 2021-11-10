@@ -1,0 +1,12 @@
+#: file containing necessary credentials for running Sweeper
+psap_nguid.csv
+
+*.bat
+*.pyc
+*.egg-info
+.pytest_cache
+__pycache__
+dist/
+build/
+.env/
+.last_checked
