@@ -94,6 +94,7 @@ psap_df = pd.read_csv(psap_csv)
 
 # Create dictionary for PSAP NGUIDs
 nguid_dict = psap_df.set_index('DsplayName').to_dict()['ES_NGUID']
+uri_dict = psap_df.set_index('DsplayName').to_dict()['URI']
 
 # Set up variables for static table and feature class
 sgid_data_table = os.path.join(ng911_db, 'SGID_PSAP_data_to_join_20210616')
@@ -121,6 +122,7 @@ unique_county_muni_temp = os.path.join(ng911_db, 'NG911_psap_bound_uniquecm_temp
 unique_diss = os.path.join(ng911_db, 'NG911_PSAP_unique_diss') # Hill AFB and NN
 all_unique_temp = os.path.join(ng911_db, 'NG911_PSAP_allu_temp') # add in others before cutting in
 sgid_final = os.path.join(ng911_db, 'NG911_psap_bound_final_sgid_' + today) # create version for SGID
+sgid_final_no_uris = os.path.join(ng911_db, 'NG911_psap_final_sgid_NoURIs_' + today) # create version for SGID without public URIs
 psap_wgs84 = os.path.join(ng911_db, 'NG911_psap_bound_final_WGS84_' + today) # creat version for NG911
 
 fc_list = [counties, munis, single_county_temp, multi_county_temp, all_county_temp,
@@ -551,8 +553,8 @@ def add_unique_psaps():
 def calc_fields(): 
     # Loop through and populate fields with appropriate information
     update_count = 0
-        #          0           1           2           3          4            5           6
-    fields = ['DsplayName', 'Source', 'DateUpdate', 'State', 'ServiceNum', 'ES_NGUID', 'OBJECTID']
+        #          0           1           2           3          4            5           6             7
+    fields = ['DsplayName', 'Source', 'DateUpdate', 'State', 'ServiceNum', 'ES_NGUID', 'OBJECTID', 'ServiceURI']
     with arcpy.da.UpdateCursor(all_unique_temp, fields) as update_cursor:
         print("Looping through rows in FC ...")
         for row in update_cursor:
@@ -562,6 +564,7 @@ def calc_fields():
             row[4] = '911'
 #            row[5] = f'PSAP{row[6]}@gis.utah.gov'
             row[5] = nguid_dict[f'{row[0]}']
+            row[7] = uri_dict[f'{row[0]}']
             update_count += 1
             update_cursor.updateRow(row)
     print(f"Total count of attribute updates is: {update_count}")
@@ -585,6 +588,12 @@ def build_sgid():
     # Copy sgid data table to all_unique_temp feature class
     # This is a copy of the PSAP Boundaries feature class with all fields for SGID
     arcpy.management.CopyFeatures(joined_data, sgid_final)
+    
+    # Make another version without URIs populated
+    arcpy.management.CopyFeatures(sgid_final, sgid_final_no_uris)
+        
+    # Delete the URI field - can still truncate/load into SGID
+    arcpy.management.DeleteField(sgid_final_no_uris, "ServiceURI")
 
 
 ##########################
