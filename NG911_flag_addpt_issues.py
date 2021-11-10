@@ -64,6 +64,7 @@ empties = [None, 'none', 'null', '', ' ', '  ']
 #: Add OID and Error_UGRC at the end, so we can ignore them in the hash
 fields.append('OID@')
 fields.append('Error_UGRC')
+print(fields)
 
 oid_index = fields.index('OID@')
 notes_index = fields.index('Error_UGRC')
