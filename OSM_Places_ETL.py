@@ -35,7 +35,8 @@ today = time.strftime("%Y%m%d")
 
 
 # Set up directories
-base_dir = r'C:\E911\2 - OSM Data'
+# base_dir = r'C:\E911\2 - OSM Data'
+base_dir = r'C:\Users\eneemann\Documents\E911\2 - OSM Data'  # Used on the Citrix machine
 work_dir = os.path.join(base_dir, f'Utah_{today}')
 
 if os.path.isdir(work_dir) == False:
