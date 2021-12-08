@@ -161,7 +161,8 @@ poi_areas_query = "name NOT IN ('', ' ') AND (fclass IN ('archaeological', 'arts
 "'hotel', 'jeweller', 'kindergarten', 'laundry', 'library', 'mall', 'motel', 'museum', 'nightclub', " \
 "'optician', 'park', 'playground', 'pharmacy', 'post_office', 'police', 'restaurant', 'school', " \
 "'shelter', 'stadium', 'supermarket', 'swimming_pool', 'theatre', 'tourist_info', 'tower', 'town_hall', 'university', " \
-"'vending_any', 'veterinary', 'viewpoint') OR fclass LIKE '%shop%' OR fclass LIKE '%store%' OR fclass LIKE '%rental%')"
+"'vending_any', 'veterinary', 'viewpoint') OR fclass LIKE '%shop%' OR fclass LIKE '%store%' OR fclass LIKE '%rental%'" \
+"OR (fclass = 'golf_course' AND name NOT IN ('', ' ') AND name NOT LIKE '%Hole%' AND name NOT LIKE '%hole%'))"
 
 arcpy.conversion.FeatureClassToFeatureClass(poi_areas, today_db, poi_areas_FC_name, poi_areas_query)
 
@@ -373,10 +374,10 @@ with arcpy.da.SearchCursor(combined_places, dup_fields) as search_cursor:
     print("Looping through rows in FC to check for duplicates within a census block ...")
     for row in search_cursor:
         string_code = row[0] + ' ' + row[1]
-        if string_code in string_dict:
+        if string_code.casefold() in string_dict:
             duplicate_oids.append(row[2])
         
-        string_dict.setdefault(string_code)
+        string_dict.setdefault(string_code.casefold())
 
 # Remove duplicates
 print(f'Removing {len(duplicate_oids)} duplicates ...')
@@ -424,75 +425,37 @@ print("Time elapsed joining near addresses: {:.2f}s".format(time.time() - addres
 
 
 
-## Add Near_addr from address points within 25 m
-#arcpy.AddField_management(combined_places, "near_addr", "TEXT", "", "", 100)
-#arcpy.AddField_management(combined_places, "disclaimer", "TEXT", "", "", 150)
-#
-#addr_field = 'FullAdd'
-#
-#addr_dict = {
-#        'county': {'addr_path': addr_path, 'addr_field': addr_field}
-#        }
-#
-#def assign_addr(pts, addrDict):
-#    
-#    arcpy.env.workspace = os.path.dirname(pts)
-#    arcpy.env.overwriteOutput = True
-#    
-#    for lyr in addrDict:
-#        # set path to address layer
-#        addrFC = addrDict[lyr]['addr_path']
-#        print (addrFC)
-#        
-#        # generate near table for each address layer
-#        neartable_addr = 'in_memory\\near_table_addr'
-#        arcpy.analysis.GenerateNearTable(pts, addrFC, neartable_addr, '25 Meters', 'NO_LOCATION', 'NO_ANGLE', 'CLOSEST')
-#        
-#        # create dictionaries to store data
-#        pt_addr_link = {}       # dictionary to link points and address by OIDs 
-#        addr_OID_field = {}     # dictionary to store address NEAR_FID as key, address field as value
-#    
-#        # loop through near table, store point IN_FID (key) and address NEAR_FID (value) in dictionary (links two features)
-#        with arcpy.da.SearchCursor(neartable_addr, ['IN_FID', 'NEAR_FID', 'NEAR_DIST']) as nearCur:
-#            for row in nearCur:
-#                pt_addr_link[row[0]] = row[1]       # IN_FID will return NEAR_FID
-#                # add all address OIDs as key in dictionary
-#                addr_OID_field.setdefault(row[1])
-#        
-#        # loop through address layer, if NEAR_FID key in addr_OID_field, set value to addr field name
-#        with arcpy.da.SearchCursor(addrFC, ['OID@', addrDict[lyr]['addr_field']]) as addrCur:
-#            for row in addrCur:
-#                if row[0] in addr_OID_field:
-#                    addr_OID_field[row[0]] = row[1]
-#        
-#        # loop through points layer, using only OID and field to be updated
-#        with arcpy.da.UpdateCursor(pts, ['OID@', lyr]) as uCur:
-#            for urow in uCur:
-#                try:
-#                    # search for corresponding address OID in address dictionay (addrDict)
-#                    if pt_addr_link[urow[0]] in addr_OID_field:
-#                        # if found, set point field equal to address field
-#                        # IN_FID in pt_addr_link returns NEAR_FID, which is key in addr_OID_field that returns value of address field
-#                        urow[1] =  addr_OID_field[pt_addr_link[urow[0]]]
-#                except:         # if error raised, just put a blank in the field
-#                    urow[1] = ''
-#                uCur.updateRow(urow)
-#    
-#        # Delete in memory near table
-#        arcpy.management.Delete(neartable_addr)
-#
-#
-#print("Populating address field from nearby address points (within 25m)")
-#address_time = time.time()
-#assign_addr(combined_places, addr_dict)
-#print("Time elapsed populating nearby addresses: {:.2f}s".format(time.time() - address_time))
-
-
-
-#combined_places_final = os.path.join(today_db, 'OSM_Places_final_dict')
-
-
 # Clean up schema and calculate fields
+# Delete unneeded/unwanted fields
+arcpy.management.DeleteField(combined_places_final, ['Join_Count', 'TARGET_FID', ])
+
+# Rename FullAdd field
+arcpy.management.AlterField(combined_places_final, 'FullAdd', 'near_addr')
+
+# Add disclaimer field
+arcpy.management.AddField(combined_places_final, "disclaimer", "TEXT", "", "", 150)
+
+calc_time = time.time()
+#                   0            1             2         3       4   
+calc_fields = ['near_addr', 'addr_dist', 'disclaimer', 'city', 'zip']
+with arcpy.da.UpdateCursor(combined_places_final, calc_fields) as update_cursor:
+    print("Looping through rows in FC to calculate fields ...")
+    for row in update_cursor:
+        if row[0] is None:
+            row[1] = None
+        else:
+            row[2] = 'NOT AN OFFICIAL ADDRESS.  Address based on nearest address point (within 25m) in UGRC database, addr_dist provides distance from OSM point.'
+        if row[3] in ('', ' '):
+            row[3] = None
+        if row[4] in ('', ' '):
+            row[4] = None
+            
+        update_cursor.updateRow(row)
+
+print("Time elapsed calculating fields: {:.2f}s".format(time.time() - calc_time))
+
+
+
 
 
 
