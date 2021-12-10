@@ -228,7 +228,7 @@ arcpy.management.MakeFeatureLayer(buildings_FC, "buildings_lyr")
 # Turn off SelectByLocation to get all buildings and filter duplicates later based on spatial index
 #arcpy.management.SelectLayerByLocation("buildings_lyr", "INTERSECT", combined_places, "3 Meters", "NEW_SELECTION", "INVERT")
 arcpy.management.FeatureToPoint("buildings_lyr", buildings_centroid, "INSIDE")
-arcpy.AddField_management(buildings_centroid, "numeric", "TEXT", "", "", 10)
+arcpy.AddField_management(buildings_centroid, "Numeric", "TEXT", "", "", 10)
 
 arcpy.management.CopyFeatures(buildings_centroid, os.path.join(today_db, 'Building_centroids_original'))
 
@@ -264,7 +264,7 @@ def numeric_check(string):
     #        0        1
 good_count = 0
 bad_count = 0
-fields = ['name', 'numeric']
+fields = ['name', 'Numeric']
 with arcpy.da.UpdateCursor(buildings_centroid, fields) as update_cursor:
     print("Looping through rows in FC to check for bad building names ...")
     for row in update_cursor:
@@ -288,27 +288,23 @@ arcpy.management.Append(buildings_centroid, combined_places, "NO_TEST")
 # Add polygon attributes (County, City, Zip, block_id)
 # Add fields
 print("Adding new fields to combined_places")
-arcpy.AddField_management(combined_places, "county", "TEXT", "", "", 25)
-arcpy.AddField_management(combined_places, "city", "TEXT", "", "", 50)
-arcpy.AddField_management(combined_places, "zip", "TEXT", "", "", 5)
-arcpy.AddField_management(combined_places, "block_id", "TEXT", "", "", 15)
+arcpy.AddField_management(combined_places, "County", "TEXT", "", "", 25)
+arcpy.AddField_management(combined_places, "City", "TEXT", "", "", 50)
+arcpy.AddField_management(combined_places, "Zip", "TEXT", "", "", 5)
+arcpy.AddField_management(combined_places, "Block_id", "TEXT", "", "", 15)
 
 SGID = r"C:\Users\eneemann\AppData\Roaming\ESRI\ArcGISPro\Favorites\internal@SGID@internal.agrc.utah.gov.sde"
-#county_path = os.path.join(SGID, 'SGID.BOUNDARIES.Counties')
 county_field = 'NAME'
-#city_path = os.path.join(SGID, 'SGID.LOCATION.AddressSystemQuadrants')
 city_field = 'GRID_NAME'
-#zip_path = os.path.join(SGID, 'SGID.BOUNDARIES.ZipCodes')
 zip_field = 'ZIP5'
-#block_path = os.path.join(SGID, 'SGID.DEMOGRAPHIC.CensusBlocks2020')
 block_field = 'GEOID20'
 
 
 poly_dict = {
-        'county': {'poly_path': county, 'poly_field': county_field},
-        'city': {'poly_path': city, 'poly_field': city_field},
-        'zip': {'poly_path': zipcode, 'poly_field': zip_field},
-        'block_id': {'poly_path': block, 'poly_field': block_field}
+        'County': {'poly_path': county, 'poly_field': county_field},
+        'City': {'poly_path': city, 'poly_field': city_field},
+        'Zip': {'poly_path': zipcode, 'poly_field': zip_field},
+        'Block_id': {'poly_path': block, 'poly_field': block_field}
         }
 
 def assign_poly_attr(pts, polygonDict):
@@ -370,7 +366,7 @@ duplicate_time = time.time()
 # Identify duplicates
 duplicate_oids = []
 string_dict = {}
-dup_fields = ['name', 'block_id', 'OID@']
+dup_fields = ['name', 'Block_id', 'OID@']
 with arcpy.da.SearchCursor(combined_places, dup_fields) as search_cursor:
     print("Looping through rows in FC to check for duplicates within a census block ...")
     for row in search_cursor:
@@ -405,23 +401,23 @@ fms = arcpy.FieldMappings()
 fms.addTable(combined_places)
 fms.addTable(addr)
 
-# FullAdd to near_addr
-fm_addr = arcpy.FieldMap()
-fm_addr.addInputField(addr, "FullAdd")
-output = fm_addr.outputField
-output.name = "near_addr"
-fm_addr.outputField = output
-fms.addFieldMap(fm_addr)
+## FullAdd to near_addr
+#fm_addr = arcpy.FieldMap()
+#fm_addr.addInputField(addr, "FullAdd")
+#output = fm_addr.outputField
+#output.name = "Near_addr"
+#fm_addr.outputField = output
+#fms.addFieldMap(fm_addr)
 
 # Remove unwanted fields from join
-keep_fields = ['osm_id', 'code', 'fclass', 'name', 'county', 'city', 'zip', 'block_id', 'FullAdd']
+keep_fields = ['osm_id', 'code', 'fclass', 'name', 'County', 'City', 'Zip', 'Block_id', 'FullAdd']
 for field in fms.fields:
     if field.name not in keep_fields:
         fms.removeFieldMap(fms.findFieldMapIndex(field.name))
 
     
 # Complete spatial join with field mapping
-arcpy.analysis.SpatialJoin(combined_places, addr, combined_places_final, 'JOIN_ONE_TO_ONE', 'KEEP_ALL', fms, 'CLOSEST', '25 Meters', 'addr_dist')
+arcpy.analysis.SpatialJoin(combined_places, addr, combined_places_final, 'JOIN_ONE_TO_ONE', 'KEEP_ALL', fms, 'CLOSEST', '25 Meters', 'Addr_dist')
 print("Time elapsed joining near addresses: {:.2f}s".format(time.time() - address_time))
 
 
@@ -430,22 +426,26 @@ print("Time elapsed joining near addresses: {:.2f}s".format(time.time() - addres
 # Delete unneeded/unwanted fields
 arcpy.management.DeleteField(combined_places_final, ['Join_Count', 'TARGET_FID', ])
 
-# Rename FullAdd field
-arcpy.management.AlterField(combined_places_final, 'FullAdd', 'near_addr')
+# Rename FullAdd field and make other fields Title case
+arcpy.management.AlterField(combined_places_final, 'FullAdd', 'Near_addr', 'Near_addr')
+arcpy.management.AlterField(combined_places_final, 'osm_id', 'OSM_id', 'OSM_id')
+arcpy.management.AlterField(combined_places_final, 'code', 'Code', 'Code')
+arcpy.management.AlterField(combined_places_final, 'fclass', 'FClass', 'FClass')
+arcpy.management.AlterField(combined_places_final, 'name', 'Name', 'Name')
 
 # Add disclaimer field
-arcpy.management.AddField(combined_places_final, "disclaimer", "TEXT", "", "", 150)
+arcpy.management.AddField(combined_places_final, "Disclaimer", "TEXT", "", "", 150)
 
 calc_time = time.time()
 #                   0            1             2         3       4   
-calc_fields = ['near_addr', 'addr_dist', 'disclaimer', 'city', 'zip']
+calc_fields = ['Near_addr', 'Addr_dist', 'Disclaimer', 'City', 'Zip']
 with arcpy.da.UpdateCursor(combined_places_final, calc_fields) as update_cursor:
     print("Looping through rows in FC to calculate fields ...")
     for row in update_cursor:
         if row[0] is None:
             row[1] = None
         else:
-            row[2] = 'NOT AN OFFICIAL ADDRESS.  Address based on nearest address point (within 25m) in UGRC database, addr_dist provides distance from OSM point.'
+            row[2] = 'NOT AN OFFICIAL ADDRESS.  Address based on nearest address point (within 25m) in UGRC database, Addr_dist provides distance from OSM point.'
         if row[3] in ('', ' '):
             row[3] = None
         if row[4] in ('', ' '):
