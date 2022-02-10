@@ -24,8 +24,9 @@ print("The script start time is {}".format(readable_start))
 # Set up databases (SGID must be changed based on user's path)
 SGID = r"C:\Users\eneemann\AppData\Roaming\ESRI\ArcGISPro\Favorites\internal@SGID@internal.agrc.utah.gov.sde"
 # ng911_db = r"\\itwfpcap2\AGRC\agrc\data\ng911\NG911_boundary_work.gdb"
-ng911_db = r"C:\Users\eneemann\Desktop\Neemann\NG911\NG911_project\NG911_boundary_work_testing.gdb"
+#ng911_db = r"C:\Users\eneemann\Desktop\Neemann\NG911\NG911_project\NG911_boundary_work_testing.gdb"
 #ng911_db = r"C:\Users\eneemann\Desktop\Neemann\NG911\NG911_project\NG911_project.gdb"
+ng911_db = r"C:\Users\eneemann\Desktop\Neemann\NG911\NG911_project\NG911_data_updates.gdb"
 
 
 arcpy.env.workspace = ng911_db
