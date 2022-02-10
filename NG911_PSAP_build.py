@@ -25,8 +25,8 @@ print("The script start time is {}".format(readable_start))
 SGID = r"C:\Users\eneemann\AppData\Roaming\ESRI\ArcGISPro\Favorites\internal@SGID@internal.agrc.utah.gov.sde"
 # ng911_db = r"\\itwfpcap2\AGRC\agrc\data\ng911\NG911_boundary_work.gdb"
 # ng911_db = r"C:\Users\eneemann\Desktop\Neemann\NG911\NG911_project\NG911_project.gdb"
-ng911_db = r"C:\Users\eneemann\Desktop\Neemann\NG911\NG911_project\NG911_boundary_work_testing.gdb"
-
+#ng911_db = r"C:\Users\eneemann\Desktop\Neemann\NG911\NG911_project\NG911_boundary_work_testing.gdb"
+ng911_db = r"C:\Users\eneemann\Desktop\Neemann\NG911\NG911_project\NG911_data_updates.gdb"
 
 arcpy.env.workspace = ng911_db
 arcpy.env.overwriteOutput = True
@@ -43,11 +43,15 @@ unique = os.path.join(ng911_db, 'NG911_PSAP_unique_UTM')
 psap_schema = os.path.join(ng911_db, 'NG911_PSAP_Schema')
 psap_working = os.path.join(ng911_db, f'NG911_PSAP_bound_working_{today}')
 
+# List of PSAPs with known "nested holes" that need to be fixed - use DsplayName
+nested_list = ['Salt Lake Valley Emergency Communications Center', 'Central Utah 911']
+
 # Read in CSV of PSAP info into pandas dataframe, use df to build dictionaries
 print("Reading in CSV to get PSAP info ...")
 # textfile_dir = r'L:\agrc\data\ng911'
 # textfile_dir = r'C:\Users\eneemann\Desktop\Neemann\NG911\NG911_project'
 textfile_dir = r'C:\Users\eneemann\Desktop\Python Code\NG911'
+work_dir =r'C:\Users\eneemann\Desktop\Neemann\NG911\NG911_project'
 
 csv = os.path.join(textfile_dir, 'PSAP_info.csv')
 psap_info = pd.read_csv(csv)
@@ -95,6 +99,7 @@ psap_df = pd.read_csv(psap_csv)
 # Create dictionary for PSAP NGUIDs
 nguid_dict = psap_df.set_index('DsplayName').to_dict()['ES_NGUID']
 uri_dict = psap_df.set_index('DsplayName').to_dict()['URI']
+county_dict = psap_df.set_index('DsplayName').to_dict()['County']
 
 # Set up variables for static table and feature class
 sgid_data_table = os.path.join(ng911_db, 'SGID_PSAP_data_to_join_20210616')
@@ -121,14 +126,18 @@ unique_county_temp = os.path.join(ng911_db, 'NG911_PSAP_uc_temp')
 unique_county_muni_temp = os.path.join(ng911_db, 'NG911_psap_bound_uniquecm_temp')
 unique_diss = os.path.join(ng911_db, 'NG911_PSAP_unique_diss') # Hill AFB and NN
 all_unique_temp = os.path.join(ng911_db, 'NG911_PSAP_allu_temp') # add in others before cutting in
+nested_temp = os.path.join(ng911_db, 'NG911_PSAP_nested_temp') # features with nested holes
+nested_fixes = os.path.join(ng911_db, 'NG911_PSAP_nested_fixes') # nested holes are fixed
+all_fixed_temp = os.path.join(ng911_db, 'NG911_PSAP_allfixed_temp') # combined fixed features
 sgid_final = os.path.join(ng911_db, 'NG911_psap_bound_final_sgid_' + today) # create version for SGID
 sgid_final_no_uris = os.path.join(ng911_db, 'NG911_psap_final_sgid_NoURIs_' + today) # create version for SGID without public URIs
-psap_wgs84 = os.path.join(ng911_db, 'NG911_psap_bound_final_WGS84_' + today) # creat version for NG911
+psap_wgs84 = os.path.join(ng911_db, 'NG911_psap_bound_final_WGS84_' + today) # create version for NG911
 
 fc_list = [counties, munis, single_county_temp, multi_county_temp, all_county_temp,
            mc_diss, mixed_temp, mixed_diss, all_mixed_temp, single_muni_temp, multi_muni_temp,
            mm_diss, county_single_muni_temp, all_county_muni_temp, unique_muni_temp,
-           unique_muni_erased, unique_county_temp, unique_county_muni_temp, unique_diss, all_unique_temp]
+           unique_muni_erased, unique_county_temp, unique_county_muni_temp, unique_diss, all_unique_temp,
+           nested_temp, nested_fixes, all_fixed_temp]
 
 for fc in fc_list:
     if arcpy.Exists(fc):
@@ -553,30 +562,25 @@ def add_unique_psaps():
 def calc_fields(): 
     # Loop through and populate fields with appropriate information
     update_count = 0
-        #          0           1           2           3          4            5           6             7
-    fields = ['DsplayName', 'Source', 'DateUpdate', 'State', 'ServiceNum', 'ES_NGUID', 'OBJECTID', 'ServiceURI']
+        #          0           1           2           3          4            5           6             7          8
+    fields = ['DsplayName', 'Source', 'DateUpdate', 'State', 'ServiceNum', 'ES_NGUID', 'OBJECTID', 'ServiceURI', 'County']
     with arcpy.da.UpdateCursor(all_unique_temp, fields) as update_cursor:
         print("Looping through rows in FC ...")
         for row in update_cursor:
             row[1] = 'UGRC'
             row[2] = datetime.now()
             row[3] = 'UT'
+            if 'Colorado' in row[0]: row[3] = 'AZ'
             row[4] = '911'
 #            row[5] = f'PSAP{row[6]}@gis.utah.gov'
             row[5] = nguid_dict[f'{row[0]}']
             row[7] = uri_dict[f'{row[0]}']
+            row[8] = county_dict[f'{row[0]}']
             update_count += 1
             update_cursor.updateRow(row)
     print(f"Total count of attribute updates is: {update_count}")
     
 
-def project_to_WGS84():
-    # Project final data to WGS84
-    print("Projecting final psap boundaries into WGS84 ...")
-    sr = arcpy.SpatialReference("WGS 1984")
-    arcpy.management.Project(all_unique_temp, psap_wgs84, sr, "WGS_1984_(ITRF00)_To_NAD_1983")
-    
-    
 def build_sgid():
     if arcpy.Exists(sgid_final):
         arcpy.management.Delete(sgid_final)
@@ -596,6 +600,76 @@ def build_sgid():
     arcpy.management.DeleteField(sgid_final_no_uris, "ServiceURI")
 
 
+def remove_nested_holes():
+    # Converted features with nested holes to singlepart polygons
+    print("Fixing PSAPs with nested holes ...")
+    if arcpy.Exists("nested_lyr"):
+        arcpy.management.Delete("nested_lyr")
+    nested_query = f"DsplayName IN ({nested_list})".replace('[', '').replace(']', '')
+    arcpy.management.MakeFeatureLayer(all_unique_temp, "nested_lyr", nested_query)
+    arcpy.management.CopyFeatures("nested_lyr", nested_temp)
+    
+    # Explode nested features into singlepart features
+    arcpy.management.MultipartToSinglepart(nested_temp, nested_fixes)
+    
+    # Drop nested fixes back in via erase/append
+    print("Adding nested PSAPs back into working psaps layer ...")
+    # Erase
+    arcpy.analysis.Erase(all_unique_temp, nested_fixes, all_fixed_temp)
+    # Append
+    arcpy.management.Append(nested_fixes, all_fixed_temp, "NO_TEST") 
+
+
+def renumber(val, record, base):
+    Start = 1  
+    Interval = 1 
+    if (record == 0):  
+        record = Start  
+    else:  
+        record += Interval
+     
+    output = val.replace(base, base + str(record).zfill(3))
+    
+    return output
+    
+    
+def recalc_nguids():
+    # Loop through to recalculate NGUIDS on exploded features
+    nguid_count = 0
+    rec = 0
+    nested_query = f"DsplayName IN ({nested_list})".replace('[', '').replace(']', '')
+    #              0             1          2
+    fields = ['DsplayName', 'ES_NGUID', 'OBJECTID']
+    with arcpy.da.UpdateCursor(all_fixed_temp, fields, nested_query) as update_cursor:
+        print("Recalculating NGUIDS on exploded features ...")
+        for row in update_cursor:
+            base_guid = row[1].split('@', 1)[0]
+            updated = renumber(row[1], rec, base_guid)
+            row[1] = updated   
+            rec += 1
+            nguid_count += 1
+            update_cursor.updateRow(row)
+    print(f"Total count of NGUID updates is: {nguid_count}")
+
+
+def project_to_WGS84():
+    # Project final data to WGS84
+    print("Projecting final psap boundaries into WGS84 ...")
+    sr = arcpy.SpatialReference("WGS 1984")
+    arcpy.management.Project(all_fixed_temp, psap_wgs84, sr, "WGS_1984_(ITRF00)_To_NAD_1983")
+
+
+def export_to_shapefile():
+    shape_folder = "0 NG911_PSAP_Shapefile_" + today
+    out_shape_dir = os.path.join(work_dir, shape_folder)
+    if os.path.isdir(out_shape_dir) == False:
+        os.mkdir(out_shape_dir)
+
+    shape_name = "UT_PSAPs_WGS84_" + today
+    arcpy.conversion.FeatureClassToFeatureClass(psap_wgs84, out_shape_dir, shape_name)
+
+
+
 ##########################
 #  Call Functions Below  #
 ##########################
@@ -609,8 +683,11 @@ add_single_muni()
 add_multi_muni()
 add_unique_psaps()
 calc_fields()
-project_to_WGS84()
 build_sgid()
+remove_nested_holes()
+recalc_nguids()
+project_to_WGS84()
+export_to_shapefile()
 
 print("Time elapsed in functions: {:.2f}s".format(time.time() - function_time))
 
