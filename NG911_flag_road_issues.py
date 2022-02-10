@@ -145,15 +145,15 @@ print(f"Total count of low vs high range issues is: {range_count} or {round((ran
 print(f"Total count of parity issues is: {parity_count} or {round((parity_count/rcl_count)*100, 3)}%")
 print(f"Total count of rows missing required value: {required_count} or {round((required_count/rcl_count)*100, 3)}%")
 
-#oid_set = set(oids_with_issues)
-#print('\nSelect statement to view errors in ArcGIS:')
-#sql = f'OBJECTID IN ({", ".join([str(oid) for oid in oid_set])})'
-#print(sql)
+oid_set = set(oids_with_issues)
+print('\nSelect statement to view errors in ArcGIS:')
+sql = f'OBJECTID IN ({", ".join([str(oid) for oid in oid_set])})'
+print(sql)
 
-## Create copy with only points containing errors
-#print('Exporting features with errors in separate feature class ...')
-#where_clause = """Error_UGRC IS NOT NULL"""
-#arcpy.conversion.FeatureClassToFeatureClass(rcls_working, error_db. rcls_final_name, where_clause)
+# Create copy with only points containing errors
+print('Exporting features with errors in separate feature class ...')
+where_clause = """Error_UGRC IS NOT NULL"""
+arcpy.conversion.FeatureClassToFeatureClass(rcls_working, error_db, rcls_final_name, where_clause)
 
 ##########################
 #  Call Functions Below  #
