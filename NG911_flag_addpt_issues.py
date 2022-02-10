@@ -76,6 +76,7 @@ required_count = 0
 print("Looping through rows in FC ...")
 with arcpy.da.UpdateCursor(addpts_working, fields) as update_cursor:
     mandatory_idx = [fields.index(item) for item in fields if item in mandatory_fields]
+    print(mandatory_fields)
     for row in update_cursor:
         comment = None
         object_id = row[oid_index]
@@ -117,7 +118,7 @@ print(f"Total count of rows missing required value: {required_count} or {round((
 # Create copy with only points containing errors
 print('Exporting features with errors in separate feature class ...')
 where_clause = """Error_UGRC IS NOT NULL"""
-arcpy.conversion.FeatureClassToFeatureClass(addpts_working, error_db. addpts_final_name, where_clause)
+arcpy.conversion.FeatureClassToFeatureClass(addpts_working, error_db, addpts_final_name, where_clause)
 
 ##########################
 #  Call Functions Below  #
