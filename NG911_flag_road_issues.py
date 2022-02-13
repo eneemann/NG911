@@ -20,7 +20,7 @@ print("The script start time is {}".format(readable_start))
 
 # Set up databases (SGID must be changed based on user's path)
 ng911_db = r"\\itwfpcap2\AGRC\agrc\data\ng911\SpatialStation_live_data\UtahNG911GIS.gdb"
-error_db = r"C:\Users\eneemann\Desktop\Neemann\NG911\911 DataMaster\NG911_Errors_20210812.gdb"
+error_db = r"C:\Users\eneemann\Desktop\Neemann\NG911\911 DataMaster\NG911_Data_Errors.gdb"
 
 arcpy.env.workspace = ng911_db
 arcpy.env.overwriteOutput = True
