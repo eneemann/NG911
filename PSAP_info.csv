@@ -11,7 +11,7 @@ Key,PSAP,Type,Counties,Munis
 ,Garfield County Sheriff's Office,single county,GARFIELD,
 ,Grand County Sheriff's Office,single county,GRAND,
 ,Hill Emergency Communications Center,unique,,
-,Kane County Sheriff's Office,single county,KANE,
+,Kane County Sheriff's Office,unique,KANE,
 ,Layton City Police Department,single muni,,LAYTON
 ,Logan City Communications Center,single county,CACHE,
 ,Millard County Sheriff's Office,single county,MILLARD,
