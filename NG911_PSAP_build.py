@@ -123,6 +123,7 @@ poly_fixes = os.path.join(ng911_db, 'NG911_PSAP_poly_fixes')
 unique_muni_temp = os.path.join(ng911_db, 'NG911_PSAP_um_temp')
 unique_muni_erased = os.path.join(ng911_db, 'NG911_PSAP_um_erased')
 unique_county_temp = os.path.join(ng911_db, 'NG911_PSAP_uc_temp')
+unique_county_erased = os.path.join(ng911_db, 'NG911_PSAP_uc_erased')
 unique_county_muni_temp = os.path.join(ng911_db, 'NG911_psap_bound_uniquecm_temp')
 unique_diss = os.path.join(ng911_db, 'NG911_PSAP_unique_diss') # Hill AFB and NN
 all_unique_temp = os.path.join(ng911_db, 'NG911_PSAP_allu_temp') # add in others before cutting in
@@ -450,7 +451,7 @@ def add_multi_muni():
     
     
 def add_unique_psaps():
-    # Assemble VECC, Provo based on mixed boundaries and append static boundaries (Hill AFB, NN)
+    # Assemble VECC, Provo based on mixed boundaries and append static boundaries (Hill AFB -- NN not longer used)
     print("Building unique PSAPs from county, muni, and fixed boundaries ...")
     arcpy.management.CopyFeatures(psap_schema, unique_muni_temp)
     arcpy.management.CopyFeatures(psap_schema, unique_county_temp)
@@ -473,14 +474,14 @@ def add_unique_psaps():
     fm_name.outputField = output
     fms.addFieldMap(fm_name)
     
-    # Build query to select multi muni 
+    # Build query to select unique muni 
     unim_list = [ item.split(',') for item in list(unique_muni_dict.values())]
     unim_list = [y.strip() for x in unim_list for y in x]
     print(unim_list)
     unim_query = f"NAME IN ({unim_list})".replace('[', '').replace(']', '')
     print(unim_query)
     
-    # Complete the append with field mapping and query to get all counties in group
+    # Complete the append with field mapping and query to get all munis in group
     arcpy.management.Append("muni_lyr", unique_muni_temp, "NO_TEST", field_mapping=fms, expression=unim_query)
     
     # Buffer fixed edge layer
@@ -491,7 +492,8 @@ def add_unique_psaps():
     arcpy.analysis.Erase(unique_muni_temp, 'in_memory\\edge_buffer', unique_muni_erased)
     
     # Append polygon fixes into erased muni layer
-    no_nulls = "DsplayName IS NOT NULL"
+    # polygon fixes with NULL names are ignored from the solution
+    no_nulls = "DsplayName IS NOT NULL AND Type = 'muni'"
     print("Appending polygon fixes to erased muni layer ...")
     arcpy.management.Append(poly_fixes, unique_muni_erased, "NO_TEST", expression=no_nulls)
       
@@ -507,7 +509,7 @@ def add_unique_psaps():
     fm_name.outputField = output
     fms.addFieldMap(fm_name)
     
-    # Build query to select multi county 
+    # Build query to select unique county 
     unic_list = [ item.split(',') for item in list(unique_county_dict.values())]
     unic_list = [y.strip() for x in unic_list for y in x]
     print(unic_list)
@@ -516,6 +518,25 @@ def add_unique_psaps():
     
     # Complete the append with field mapping and query to create county layer
     arcpy.management.Append("county_lyr", unique_county_temp, "NO_TEST", field_mapping=fms, expression=unic_query)
+    
+    
+#    # Erase current county layer with buffer
+#    arcpy.analysis.Erase(unique_county_temp, 'in_memory\\edge_county_buffer', unique_county_erased)
+    
+#    # Append the two erased layers (muni and county) together into one
+#    arcpy.management.Append(unique_county_erased, unique_muni_erased, "NO_TEST")
+    
+    # Append polygon fixes into erased muni layer (now the combo layer)
+    
+    # Append polygon fixes into the county layer
+    # polygon fixes with NULL names are ignored from the solution
+    no_nulls = "DsplayName IS NOT NULL AND Type = 'county'"
+    print("Appending polygon fixes to erased county layer ...")
+    arcpy.management.Append(poly_fixes, unique_muni_erased, "NO_TEST", expression=no_nulls)
+    
+    
+    
+    
     
     # Erase county layer with poly-fixed muni layer
     arcpy.analysis.Erase(unique_county_temp, unique_muni_erased, unique_county_muni_temp)
