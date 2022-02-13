@@ -21,7 +21,7 @@ print("The script start time is {}".format(readable_start))
 
 # Set up databases (SGID must be changed based on user's path)
 ng911_db = r"\\itwfpcap2\AGRC\agrc\data\ng911\SpatialStation_live_data\UtahNG911GIS.gdb"
-error_db = r"C:\Users\eneemann\Desktop\Neemann\NG911\911 DataMaster\NG911_Errors_20210812.gdb"
+error_db = r"C:\Users\eneemann\Desktop\Neemann\NG911\911 DataMaster\NG911_Data_Errors.gdb"
 
 arcpy.env.workspace = ng911_db
 arcpy.env.overwriteOutput = True
@@ -58,7 +58,7 @@ if description['hasOID']:
     skip_fields.append(description['OIDFieldName'])
 
 fields = [field.name for field in description['fields'] if field.name not in skip_fields]
-mandatory_fields = ['Site_NGUID', 'State', 'County', 'Add_Number', 'LSt_Name', 'MSAGComm']
+mandatory_fields = ['GlobalID', 'State', 'County', 'Add_Number', 'LSt_Name', 'MSAGComm']
 empties = [None, 'none', 'null', '', ' ', '  ']
 
 #: Add OID and Error_UGRC at the end, so we can ignore them in the hash
