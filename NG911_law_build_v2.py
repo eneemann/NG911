@@ -43,8 +43,9 @@ law_working = os.path.join(ng911_db, 'NG911_Law_bound_working_' + today)
 
 # Read in text file of municipalities with PDs
 print("Reading in text file to get Municipalities with Police Departments ...")
-textfile_dir = r'\\itwfpcap2\AGRC\agrc\data\ng911'
-#textfile_dir = r'C:\Users\eneemann\Desktop\Neemann\NG911\NG911_project'
+#textfile_dir = r'\\itwfpcap2\AGRC\agrc\data\ng911'
+textfile_dir = r'C:\Users\eneemann\Desktop\Neemann\NG911\NG911_project'
+work_dir =r'C:\Users\eneemann\Desktop\Neemann\NG911\NG911_project'
 filename = os.path.join(textfile_dir, 'Munis_with_PDs.txt')
 with open(filename, 'r') as filehandle:
     muni_pd_temp = [muni.strip() for muni in filehandle.readlines()]
@@ -103,6 +104,7 @@ SOs_temp = os.path.join(ng911_db, 'NG911_law_bound_SOs_temp')
 PDs_temp = os.path.join(ng911_db, 'NG911_law_bound_PDs_temp')
 PDs_diss = os.path.join(ng911_db, 'NG911_law_bound_PDs_diss')
 PDs_join = os.path.join(ng911_db, 'NG911_law_bound_PDs_join')
+PDs_repair = os.path.join(ng911_db, 'NG911_law_bound_PDs_repair')
 combos_temp = os.path.join(ng911_db, 'NG911_law_bound_combos_temp')
 combos_diss = os.path.join(ng911_db, 'NG911_law_bound_combos_diss')
 combos_join = os.path.join(ng911_db, 'NG911_law_bound_combos_join')
@@ -267,12 +269,16 @@ def add_combos():
     print("Adding combo jurisdictions into PDs layer ...")
     arcpy.management.Append(combos_join, PDs_join, "NO_TEST")
     
+    # Perform geometry repair to clean up PDs layer before droppping into SOs layer
+    arcpy.management.CopyFeatures(PDs_join, PDs_repair)
+    arcpy.management.RepairGeometry(PDs_repair, 'DELETE_NULL', 'ESRI')
+    
     # Drop police departments into sheriffs offices via erase/append
     print("Inserting PD boundaries into Sheriff's Office boundaries ...")
     # Erase
-    arcpy.analysis.Erase(SOs_temp, PDs_join, SOs_holes)
+    arcpy.analysis.Erase(SOs_temp, PDs_repair, SOs_holes)
     # Append
-    arcpy.management.Append(PDs_join, SOs_holes, "NO_TEST")
+    arcpy.management.Append(PDs_repair, SOs_holes, "NO_TEST")
     
     
 def add_unique_pds():
@@ -324,11 +330,82 @@ def calc_fields():
     print(f"Total count of attribute updates is: {update_count}")
 
 
+def repair_geometry():
+    print("Checking geometry ...")
+    arcpy.management.CheckGeometry(law_final, 'in_memory\\error_table', 'ESRI')
+    error_count = arcpy.management.GetCount('in_memory\\error_table')[0]
+    print(f"Total count of geometry errors found: {error_count}")
+    
+    if int(error_count) > 0:
+        # Convert neartable to pandas dataframe
+        error_arr = arcpy.da.TableToNumPyArray('in_memory\\error_table', '*')
+        error_df = pd.DataFrame(data = error_arr)
+        print(error_df['PROBLEM'].value_counts())
+        
+        
+        fields = ['FEATURE_ID', 'PROBLEM']
+        with arcpy.da.SearchCursor('in_memory\\error_table', fields) as search_cursor:
+            print("Looping through rows in error table ...")
+            for row in search_cursor:
+                print(f'OID {row[0]}: {row[1]}')
+        
+        print("Repairing geometry ...")
+        arcpy.management.RepairGeometry(law_final, 'DELETE_NULL', 'ESRI')
+    
+        print("Rechecking geometry ...")
+        arcpy.management.CheckGeometry(law_final, 'in_memory\\error_table_2', 'ESRI')
+        error_count_2 = arcpy.management.GetCount('in_memory\\error_table_2')[0]
+        print(f"Remaining geometry errors found: {error_count_2}")
+        
+        if int(error_count_2) > 0:
+            print("Geometry errors still exist after attempt to repair!")
+
+
 def project_to_WGS84():
     # Project final data to WGS84
     print("Projecting final law boundaries into WGS84 ...")
     sr = arcpy.SpatialReference("WGS 1984")
     arcpy.management.Project(law_final, law_wgs84, sr, "WGS_1984_(ITRF00)_To_NAD_1983")
+    
+    print("Checking WGS84 geometry ...")
+    arcpy.management.CheckGeometry(law_wgs84, 'in_memory\\error_table_3', 'ESRI')
+    error_count_3 = arcpy.management.GetCount('in_memory\\error_table_3')[0]
+    print(f"Total count of WGS84 geometry errors found: {error_count_3}")
+    
+    if int(error_count_3) > 0:
+        # Convert neartable to pandas dataframe
+        error_arr = arcpy.da.TableToNumPyArray('in_memory\\error_table_3', '*')
+        error_df = pd.DataFrame(data = error_arr)
+        print(error_df['PROBLEM'].value_counts())
+        
+        
+        fields = ['FEATURE_ID', 'PROBLEM']
+        with arcpy.da.SearchCursor('in_memory\\error_table_3', fields) as search_cursor:
+            print("Looping through rows in error table ...")
+            for row in search_cursor:
+                print(f'OID {row[0]}: {row[1]}')
+        
+        print("Repairing WGS84 geometry ...")
+        arcpy.management.RepairGeometry(law_wgs84, 'DELETE_NULL', 'ESRI')
+    
+        print("Rechecking WGS84 geometry ...")
+        arcpy.management.CheckGeometry(law_wgs84, 'in_memory\\error_table_4', 'ESRI')
+        error_count_4 = arcpy.management.GetCount('in_memory\\error_table_4')[0]
+        print(f"Remaining WGS84 geometry errors found: {error_count_4}")
+        
+        if int(error_count_4) > 0:
+            print("Geometry WGS84 errors still exist after attempt to repair!")
+
+
+def export_to_shapefile():
+    shape_folder = "0 NG911_Law_Shapefile_" + today
+    out_shape_dir = os.path.join(work_dir, shape_folder)
+    if os.path.isdir(out_shape_dir) == False:
+        os.mkdir(out_shape_dir)
+
+    shape_name = "UT_Law_WGS84_" + today
+    arcpy.conversion.FeatureClassToFeatureClass(law_wgs84, out_shape_dir, shape_name)
+
 
 #----------------------------------------------------------------
 # Additional enhancements for the future
@@ -347,10 +424,17 @@ add_combos()
 add_unique_pds()
 correct_names()
 calc_fields()
+repair_geometry()
 project_to_WGS84()
+export_to_shapefile()
 
 print("Script shutting down ...")
 # Stop timer and print end time in UTC
 readable_end = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
 print("The script end time is {}".format(readable_end))
 print("Time elapsed: {:.2f}s".format(time.time() - start_time))
+
+#esri_repair = os.path.join(ng911_db, 'a_Law_import_from_shapefile_20220216')
+#arcpy.management.RepairGeometry(esri_repair, 'DELETE_NULL', 'ESRI')
+#ogc_repair = os.path.join(ng911_db, 'a_law_repair_ogc')
+#arcpy.management.RepairGeometry(ogc_repair, 'DELETE_NULL', 'OGC')
