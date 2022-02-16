@@ -48,7 +48,7 @@ nested_list = ['Salt Lake Valley Emergency Communications Center', 'Central Utah
 
 # Read in CSV of PSAP info into pandas dataframe, use df to build dictionaries
 print("Reading in CSV to get PSAP info ...")
-# textfile_dir = r'L:\agrc\data\ng911'
+# textfile_dir = r'\\itwfpcap2\AGRC\agrc\data\ng911'
 # textfile_dir = r'C:\Users\eneemann\Desktop\Neemann\NG911\NG911_project'
 textfile_dir = r'C:\Users\eneemann\Desktop\Python Code\NG911'
 work_dir =r'C:\Users\eneemann\Desktop\Neemann\NG911\NG911_project'
