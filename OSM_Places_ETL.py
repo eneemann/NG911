@@ -19,6 +19,10 @@ import time
 import zipfile
 import wget
 import arcpy
+import requests
+import pandas as pd
+import geopandas as gpd
+from shapely.geometry import Point
 
 #from arcpy import env
 #import pandas as pd
@@ -106,6 +110,7 @@ transport_FC = os.path.join(today_db, transport_FC_name)
 transport_centroid = os.path.join(today_db, transport_centroid_name)
 buildings_FC = os.path.join(today_db, buildings_FC_name)
 buildings_centroid = os.path.join(today_db, buildings_centroid_name)
+combined_places_simple = os.path.join(today_db, 'OSM_Places_simple')
 combined_places_final = os.path.join(today_db, 'OSM_Places_final')
 
 temp_files = ['Building_centroids_original', pois_FC, poi_areas_FC, poi_areas_centroid,
@@ -132,6 +137,7 @@ def create_gdb():
         arcpy.CreateFileGDB_management(work_dir, today_db_name)
     
     arcpy.env.workspace = today_db
+    arcpy.env.qualifiedFieldNames = False
 
 
 # Copy SGID data layers to local for faster processing
@@ -345,20 +351,20 @@ def assign_poly_attr(pts, polygonDict):
         # Delete in memory near table
         arcpy.management.Delete(neartable)
 
-# Add polygon attributes (County, City, Zip, block_id)
+# Add polygon attributes (county, city, zip, block_id)
 def add_attributes():
     # Add fields
     print("Adding new fields to combined_places")
-    arcpy.AddField_management(combined_places, "County", "TEXT", "", "", 25)
-    arcpy.AddField_management(combined_places, "City", "TEXT", "", "", 50)
-    arcpy.AddField_management(combined_places, "Zip", "TEXT", "", "", 5)
-    arcpy.AddField_management(combined_places, "Block_id", "TEXT", "", "", 15)
+    arcpy.AddField_management(combined_places, "county", "TEXT", "", "", 25)
+    arcpy.AddField_management(combined_places, "city", "TEXT", "", "", 50)
+    arcpy.AddField_management(combined_places, "zip", "TEXT", "", "", 5)
+    arcpy.AddField_management(combined_places, "block_id", "TEXT", "", "", 15)
     
     poly_dict = {
-            'County': {'poly_path': county, 'poly_field': county_field},
-            'City': {'poly_path': city, 'poly_field': city_field},
-            'Zip': {'poly_path': zipcode, 'poly_field': zip_field},
-            'Block_id': {'poly_path': block, 'poly_field': block_field}
+            'county': {'poly_path': county, 'poly_field': county_field},
+            'city': {'poly_path': city, 'poly_field': city_field},
+            'zip': {'poly_path': zipcode, 'poly_field': zip_field},
+            'block_id': {'poly_path': block, 'poly_field': block_field}
             }
     
     print("Populating new fields from polygons")
@@ -373,7 +379,7 @@ def remove_duplicates():
     # Identify duplicates
     duplicate_oids = []
     string_dict = {}
-    dup_fields = ['name', 'Block_id', 'OID@']
+    dup_fields = ['name', 'block_id', 'OID@']
     with arcpy.da.SearchCursor(combined_places, dup_fields) as search_cursor:
         print("Looping through rows in FC to check for duplicates within a census block ...")
         for row in search_cursor:
@@ -395,7 +401,7 @@ def remove_duplicates():
 
 
 def add_addresses():
-    # Add Near_addr from address points within 25 m
+    # Add near_addr from address points within 25 m
     address_time = time.time()
     #addpt_path = addr    
     
@@ -410,46 +416,46 @@ def add_addresses():
     #fm_addr = arcpy.FieldMap()
     #fm_addr.addInputField(addr, "FullAdd")
     #output = fm_addr.outputField
-    #output.name = "Near_addr"
+    #output.name = "near_addr"
     #fm_addr.outputField = output
     #fms.addFieldMap(fm_addr)
     
     # Remove unwanted fields from join
-    keep_fields = ['osm_id', 'code', 'fclass', 'name', 'County', 'City', 'Zip', 'Block_id', 'FullAdd']
+    keep_fields = ['osm_id', 'code', 'fclass', 'name', 'county', 'city', 'zip', 'block_id', 'FullAdd']
     for field in fms.fields:
         if field.name not in keep_fields:
             fms.removeFieldMap(fms.findFieldMapIndex(field.name))
     
     # Complete spatial join with field mapping
-    arcpy.analysis.SpatialJoin(combined_places, addr, combined_places_final, 'JOIN_ONE_TO_ONE', 'KEEP_ALL', fms, 'CLOSEST', '25 Meters', 'Addr_dist')
+    arcpy.analysis.SpatialJoin(combined_places, addr, combined_places_simple, 'JOIN_ONE_TO_ONE', 'KEEP_ALL', fms, 'CLOSEST', '25 Meters', 'addr_dist')
     print("Time elapsed joining near addresses: {:.2f}s".format(time.time() - address_time))
 
 
 def calc_fields():
     # Clean up schema and calculate fields
     # Delete unneeded/unwanted fields
-    arcpy.management.DeleteField(combined_places_final, ['Join_Count', 'TARGET_FID', ])
+    arcpy.management.DeleteField(combined_places_simple, ['Join_Count', 'TARGET_FID', ])
     
     # Rename FullAdd field and make other fields Title case
-    arcpy.management.AlterField(combined_places_final, 'FullAdd', 'Near_addr', 'Near_addr')
-    arcpy.management.AlterField(combined_places_final, 'osm_id', 'OSM_id', 'OSM_id')
-    arcpy.management.AlterField(combined_places_final, 'code', 'Code', 'Code')
-    arcpy.management.AlterField(combined_places_final, 'fclass', 'FClass', 'FClass')
-    arcpy.management.AlterField(combined_places_final, 'name', 'Name', 'Name')
+    arcpy.management.AlterField(combined_places_simple, 'FullAdd', 'near_addr', 'near_addr')
+#    arcpy.management.AlterField(combined_places_simple, 'osm_id', 'OSM_id', 'OSM_id')
+#    arcpy.management.AlterField(combined_places_simple, 'code', 'Code', 'Code')
+#    arcpy.management.AlterField(combined_places_simple, 'fclass', 'FClass', 'FClass')
+#    arcpy.management.AlterField(combined_places_simple, 'name', 'Name', 'Name')
     
     # Add disclaimer field
-    arcpy.management.AddField(combined_places_final, "Disclaimer", "TEXT", "", "", 150)
+    arcpy.management.AddField(combined_places_simple, "disclaimer", "TEXT", "", "", 150)
     
     calc_time = time.time()
     #                   0            1             2         3       4   
-    calc_fields = ['Near_addr', 'Addr_dist', 'Disclaimer', 'City', 'Zip']
-    with arcpy.da.UpdateCursor(combined_places_final, calc_fields) as update_cursor:
+    calc_fields = ['near_addr', 'addr_dist', 'disclaimer', 'city', 'zip']
+    with arcpy.da.UpdateCursor(combined_places_simple, calc_fields) as update_cursor:
         print("Looping through rows in FC to calculate fields ...")
         for row in update_cursor:
             if row[0] is None:
                 row[1] = None
             else:
-                row[2] = 'NOT AN OFFICIAL ADDRESS.  Address based on nearest address point (within 25m) in UGRC database, Addr_dist provides distance from OSM point.'
+                row[2] = 'NOT AN OFFICIAL ADDRESS.  Address based on nearest address point (within 25m) in UGRC database, addr_dist provides distance from OSM point.'
             if row[3] in ('', ' '):
                 row[3] = None
             if row[4] in ('', ' '):
@@ -457,18 +463,24 @@ def calc_fields():
                 
             update_cursor.updateRow(row)
     
+    # Calculate lon/lat values for all points (WGS84 coords)
+    arcpy.management.AddField(combined_places_simple, 'lon', 'FLOAT', field_scale="6")
+    arcpy.management.AddField(combined_places_simple, 'lat', 'FLOAT', field_scale="6")
+    arcpy.management.CalculateGeometryAttributes(combined_places_simple, [['lon', 'POINT_X'], ['lat', 'POINT_Y']], coordinate_format='DD')
+    
+    
     print("Time elapsed calculating fields: {:.2f}s".format(time.time() - calc_time))
 
 
 def final_numeric_check():
-    arcpy.AddField_management(combined_places_final, "Num_check", "TEXT", "", "", 10)
+    arcpy.AddField_management(combined_places_simple, "NUM_CHECK", "TEXT", "", "", 10)
     
     # Filter out places with bad/numeric names (like '12C', 'Building 15', just a house number, etc.)
         #        0        1
     good_count = 0
     bad_count = 0
-    fields = ['name', 'Num_check']
-    with arcpy.da.UpdateCursor(combined_places_final, fields) as update_cursor:
+    fields = ['name', 'NUM_CHECK']
+    with arcpy.da.UpdateCursor(combined_places_simple, fields) as update_cursor:
         print("Looping through rows in FC to check for numeric place names ...")
         for row in update_cursor:
             check = numeric_check(row[0])
@@ -483,7 +495,7 @@ def final_numeric_check():
     print(f'Count of good place names found: {good_count}')
     print(f'Count of bad place names found: {bad_count}')
     
-    arcpy.management.DeleteField(combined_places_final, ['Num_check'])
+    arcpy.management.DeleteField(combined_places_simple, ['NUM_CHECK'])
 
 
 def delete_files():
@@ -508,21 +520,31 @@ def delete_files():
         arcpy.management.Delete(fc)
 
 
+# Get additional details from Overpass API function
+def get_overpass_gdf(query_string):
+    # Retrieve URL contents
+    r = requests.get(query_string)
+    # Make dataframe
+    df = pd.DataFrame(r.json()['elements'])
+    # Make geodataframe
+    df['geometry'] = [Point(xy) for xy in zip(df.lon, df.lat)]
+    df = gpd.GeoDataFrame(df, geometry='geometry')
 
-# Get additional details from Overpass API
-
-# Filter Overpass data down to OSM_ids in Geofabrik data
-
-# Calculate OSM address
-
-# Convert Overpass table to arcpy table        
+    return df
 
 
-# Join Overpass table to Geofabrik data
-        
+# Calculate OSM address function
+def calc_address(row):
+    """ Concatenate address parts into a single field"""
+    addr = ' '.join([str(row['addr:housenumber']), str(row['addr:street']), str(row['addr:city']), str(row['addr:postcode'])])
+    addr = addr.replace('nan', ' ')
+    addr = ' '.join(addr.split())
+    row['OSM_addr'] = addr
+    return row
 
-# Clean up any leftover mess (fields, blanks, etc.)
 
+#def add_overpass_fields():
+    
 
 
 # Call functions 
@@ -541,7 +563,54 @@ calc_fields()
 final_numeric_check()
 delete_files()
 
+print("Time elapsed in before Overpass function: {:.2f}s".format(time.time() - start_time))
 
+overpass_start_time = time.time()
+# Get data from query
+query_string = 'http://overpass-api.de/api/interpreter?data=[out:json];area[name="Utah"]->.utah;nwr[!highway][name](area.utah);out center;'
+overpass = get_overpass_gdf(query_string)
+
+# Normalize the tags field (dictionary) into separate columns
+temp = pd.json_normalize(overpass['tags'])
+overpass_normal = pd.concat([overpass.drop('tags', axis=1), temp], axis=1)
+
+# Filter down to useful columns
+keep_cols = ['id', 'lat', 'lon', 'name', 'geometry', 'amenity', 'cuisine',
+        'tourism', 'shop', 'website', 'phone', 'opening_hours', 'keep_row', 'type',
+        'addr:housenumber', 'addr:street', 'addr:city', 'addr:postcode']
+overpass_normal_slim = overpass_normal[keep_cols]
+
+
+# Filter Overpass data down to OSM_ids in Geofabrik data
+geofabrik_place_ids = [i for i in arcpy.da.SearchCursor(combined_places_simple, 'osm_id')]
+overpass_ids = overpass_normal_slim[overpass_normal_slim['id'].isin(geofabrik_place_ids)]
+
+
+overpass_ids = overpass_ids.apply(calc_address, axis=1)
+
+# Pare columns down to those that will be joined, set as string type
+join_cols = ['id', 'name', 'amenity', 'cuisine', 'tourism', 'shop', 'website',
+              'phone', 'opening_hours', 'OSM_addr']
+overpass_to_join = overpass_ids[join_cols]
+overpass_to_join[['id']] = overpass_to_join[['id']].astype(str)
+
+# Convert Overpass table to arcpy table    
+overpass_csv = os.path.join(work_dir, 'overpass_data.csv')
+overpass_to_join.to_csv(overpass_csv)
+
+if arcpy.Exists("overpass_to_join"):
+    arcpy.Delete_management("overpass_to_join")
+arcpy.TableToTable_conversion(overpass_csv, today_db, "overpass_to_join")
+
+# Join Overpass table to Geofabrik data
+joined_places = arcpy.AddJoin_management(combined_places_simple, "osm_id", "overpass_to_join", "id")
+# Copy joined data to its own feature class
+# This is a copy of the 'combined_places_simple' feature class with new joined fields
+arcpy.CopyFeatures_management(combined_places_simple, combined_places_final)     
+
+# Clean up any leftover mess (fields, blanks, etc.)
+
+print("Time elapsed in Overpass function: {:.2f}s".format(time.time() - overpass_start_time))
 
 print("Script shutting down ...")
 # Stop timer and print end time in UTC
