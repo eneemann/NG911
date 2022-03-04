@@ -21,8 +21,9 @@ import wget
 import arcpy
 import requests
 import pandas as pd
-import geopandas as gpd
+# import geopandas as gpd
 from shapely.geometry import Point
+from arcgis.features import GeoAccessor, GeoSeriesAccessor
 
 #from arcpy import env
 #import pandas as pd
@@ -40,8 +41,8 @@ today = time.strftime("%Y%m%d")
 
 # Set up directories
 # base_dir = r'C:\E911\2 - OSM Data'
-#base_dir = r'C:\Users\eneemann\Documents\E911\2 - OSM Data'  # Used on the Citrix machine
-base_dir = r'\\itwfpcap2\AGRC\agrc\users\eneemann\Neemann\2 - OSM Data'  # Used for the L:Drive (from laptop)
+base_dir = r'C:\Users\eneemann\Documents\E911\2 - OSM Data'  # Used on the Citrix machine
+# base_dir = r'\\itwfpcap2\AGRC\agrc\users\eneemann\Neemann\2 - OSM Data'  # Used for the L:Drive (from laptop)
 work_dir = os.path.join(base_dir, f'Utah_{today}')
 
 if os.path.isdir(work_dir) == False:
@@ -276,7 +277,7 @@ def add_buildings():
     # Turn off SelectByLocation to get all buildings and filter duplicates later based on spatial index
     #arcpy.management.SelectLayerByLocation("buildings_lyr", "INTERSECT", combined_places, "3 Meters", "NEW_SELECTION", "INVERT")
     arcpy.management.FeatureToPoint("buildings_lyr", buildings_centroid, "INSIDE")
-    arcpy.AddField_management(buildings_centroid, "Numeric", "TEXT", "", "", 10)
+    arcpy.management.AddField(buildings_centroid, "Numeric", "TEXT", "", "", 10)
     
     arcpy.management.CopyFeatures(buildings_centroid, os.path.join(today_db, 'Building_centroids_original'))
     
@@ -355,10 +356,10 @@ def assign_poly_attr(pts, polygonDict):
 def add_attributes():
     # Add fields
     print("Adding new fields to combined_places")
-    arcpy.AddField_management(combined_places, "county", "TEXT", "", "", 25)
-    arcpy.AddField_management(combined_places, "city", "TEXT", "", "", 50)
-    arcpy.AddField_management(combined_places, "zip", "TEXT", "", "", 5)
-    arcpy.AddField_management(combined_places, "block_id", "TEXT", "", "", 15)
+    arcpy.management.AddField(combined_places, "county", "TEXT", "", "", 25)
+    arcpy.management.AddField(combined_places, "city", "TEXT", "", "", 50)
+    arcpy.management.AddField(combined_places, "zip", "TEXT", "", "", 5)
+    arcpy.management.AddField(combined_places, "block_id", "TEXT", "", "", 15)
     
     poly_dict = {
             'county': {'poly_path': county, 'poly_field': county_field},
@@ -401,7 +402,7 @@ def remove_duplicates():
 
 
 def add_addresses():
-    # Add near_addr from address points within 25 m
+    # Add UGRC_near_addr from address points within 25 m
     address_time = time.time()
     #addpt_path = addr    
     
@@ -412,11 +413,11 @@ def add_addresses():
     fms.addTable(combined_places)
     fms.addTable(addr)
     
-    ## FullAdd to near_addr
+    ## FullAdd to UGRC_near_addr
     #fm_addr = arcpy.FieldMap()
     #fm_addr.addInputField(addr, "FullAdd")
     #output = fm_addr.outputField
-    #output.name = "near_addr"
+    #output.name = "UGRC_near_addr"
     #fm_addr.outputField = output
     #fms.addFieldMap(fm_addr)
     
@@ -437,7 +438,7 @@ def calc_fields():
     arcpy.management.DeleteField(combined_places_simple, ['Join_Count', 'TARGET_FID', ])
     
     # Rename FullAdd field and make other fields Title case
-    arcpy.management.AlterField(combined_places_simple, 'FullAdd', 'near_addr', 'near_addr')
+    arcpy.management.AlterField(combined_places_simple, 'FullAdd', 'UGRC_near_addr', 'UGRC_near_addr')
 #    arcpy.management.AlterField(combined_places_simple, 'osm_id', 'OSM_id', 'OSM_id')
 #    arcpy.management.AlterField(combined_places_simple, 'code', 'Code', 'Code')
 #    arcpy.management.AlterField(combined_places_simple, 'fclass', 'FClass', 'FClass')
@@ -448,7 +449,7 @@ def calc_fields():
     
     calc_time = time.time()
     #                   0            1             2         3       4   
-    calc_fields = ['near_addr', 'addr_dist', 'disclaimer', 'city', 'zip']
+    calc_fields = ['UGRC_near_addr', 'addr_dist', 'disclaimer', 'city', 'zip']
     with arcpy.da.UpdateCursor(combined_places_simple, calc_fields) as update_cursor:
         print("Looping through rows in FC to calculate fields ...")
         for row in update_cursor:
@@ -473,7 +474,7 @@ def calc_fields():
 
 
 def final_numeric_check():
-    arcpy.AddField_management(combined_places_simple, "NUM_CHECK", "TEXT", "", "", 10)
+    arcpy.management.AddField(combined_places_simple, "NUM_CHECK", "TEXT", "", "", 10)
     
     # Filter out places with bad/numeric names (like '12C', 'Building 15', just a house number, etc.)
         #        0        1
@@ -528,7 +529,7 @@ def get_overpass_gdf(query_string):
     df = pd.DataFrame(r.json()['elements'])
     # Make geodataframe
     df['geometry'] = [Point(xy) for xy in zip(df.lon, df.lat)]
-    df = gpd.GeoDataFrame(df, geometry='geometry')
+    # df = gpd.GeoDataFrame(df, geometry='geometry')
 
     return df
 
@@ -563,28 +564,37 @@ calc_fields()
 final_numeric_check()
 delete_files()
 
-print("Time elapsed in before Overpass function: {:.2f}s".format(time.time() - start_time))
+print("Time elapsed before Overpass function: {:.2f}s".format(time.time() - start_time))
+
+
+###################
+### JOIN METHOD ###
+###################
 
 overpass_start_time = time.time()
 # Get data from query
 query_string = 'http://overpass-api.de/api/interpreter?data=[out:json];area[name="Utah"]->.utah;nwr[!highway][name](area.utah);out center;'
 overpass = get_overpass_gdf(query_string)
+overpass_small = overpass[['id', 'type', 'tags']]
+overpass_small = overpass_small[overpass_small['type'] != 'relation']
 
 # Normalize the tags field (dictionary) into separate columns
-temp = pd.json_normalize(overpass['tags'])
-overpass_normal = pd.concat([overpass.drop('tags', axis=1), temp], axis=1)
+temp = pd.json_normalize(overpass_small['tags'])
+overpass_normal = pd.concat([overpass_small.drop('tags', axis=1), temp], axis=1)
+overpass_normal_300 = overpass_normal.iloc[:, : 300]
 
 # Filter down to useful columns
-keep_cols = ['id', 'lat', 'lon', 'name', 'geometry', 'amenity', 'cuisine',
-        'tourism', 'shop', 'website', 'phone', 'opening_hours', 'keep_row', 'type',
+keep_cols = ['id', 'name', 'amenity', 'cuisine',
+        'tourism', 'shop', 'website', 'phone', 'opening_hours', 'type',
         'addr:housenumber', 'addr:street', 'addr:city', 'addr:postcode']
-overpass_normal_slim = overpass_normal[keep_cols]
+overpass_normal_slim = overpass_normal_300[keep_cols]
 
 
 # Filter Overpass data down to OSM_ids in Geofabrik data
-geofabrik_place_ids = [i for i in arcpy.da.SearchCursor(combined_places_simple, 'osm_id')]
+geofabrik_place_ids = [str(i).strip("(',)") for i in arcpy.da.SearchCursor(combined_places_simple, 'osm_id')]
+# overpass_ids = overpass_normal_slim[overpass_normal_slim['id'].isin(geofabrik_place_ids)]
+overpass_normal_slim[['id']] = overpass_normal_slim[['id']].astype(str)
 overpass_ids = overpass_normal_slim[overpass_normal_slim['id'].isin(geofabrik_place_ids)]
-
 
 overpass_ids = overpass_ids.apply(calc_address, axis=1)
 
@@ -592,7 +602,7 @@ overpass_ids = overpass_ids.apply(calc_address, axis=1)
 join_cols = ['id', 'name', 'amenity', 'cuisine', 'tourism', 'shop', 'website',
               'phone', 'opening_hours', 'OSM_addr']
 overpass_to_join = overpass_ids[join_cols]
-overpass_to_join[['id']] = overpass_to_join[['id']].astype(str)
+# overpass_to_join[['id']] = overpass_to_join[['id']].astype(str)
 
 # Convert Overpass table to arcpy table    
 overpass_csv = os.path.join(work_dir, 'overpass_data.csv')
@@ -600,17 +610,80 @@ overpass_to_join.to_csv(overpass_csv)
 
 if arcpy.Exists("overpass_to_join"):
     arcpy.Delete_management("overpass_to_join")
-arcpy.TableToTable_conversion(overpass_csv, today_db, "overpass_to_join")
+
+table_to_join = os.path.join(today_db, "overpass_to_join")
+arcpy.conversion.TableToTable(overpass_csv, today_db, "overpass_to_join")
+
+arcpy.management.AddField(table_to_join, "string_id", "TEXT", "", "", 20)
+arcpy.management.CalculateField(table_to_join, "string_id", "str(!id!)", "PYTHON3")
+
 
 # Join Overpass table to Geofabrik data
-joined_places = arcpy.AddJoin_management(combined_places_simple, "osm_id", "overpass_to_join", "id")
+join_fields = ['string_id', 'amenity', 'cuisine', 'tourism', 'shop', 'website',
+              'phone', 'opening_hours', 'OSM_addr']
+# joined_places = arcpy.management.AddJoin(combined_places_simple, "osm_id", table_to_join, "id")
+joined_places = arcpy.management.JoinField(combined_places_simple, "osm_id", table_to_join, "string_id", join_fields[1:])
 # Copy joined data to its own feature class
 # This is a copy of the 'combined_places_simple' feature class with new joined fields
-arcpy.CopyFeatures_management(combined_places_simple, combined_places_final)     
+arcpy.management.CopyFeatures(joined_places, combined_places_final)     
 
 # Clean up any leftover mess (fields, blanks, etc.)
 
 print("Time elapsed in Overpass function: {:.2f}s".format(time.time() - overpass_start_time))
+
+
+
+##################
+### SDF METHOD ###
+##################
+
+overpass_start_time = time.time()
+# Get data from query
+query_string = 'http://overpass-api.de/api/interpreter?data=[out:json];area[name="Utah"]->.utah;nwr[!highway][name](area.utah);out center;'
+overpass = get_overpass_gdf(query_string)
+overpass_small = overpass[['id', 'type', 'tags']]
+overpass_small = overpass_small[overpass_small['type'] != 'relation']
+
+# Normalize the tags field (dictionary) into separate columns
+temp = pd.json_normalize(overpass_small['tags'])
+overpass_normal = pd.concat([overpass_small.drop('tags', axis=1), temp], axis=1)
+overpass_normal_300 = overpass_normal.iloc[:, : 300]
+
+# Filter down to useful columns
+keep_cols = ['id', 'name', 'amenity', 'cuisine',
+        'tourism', 'shop', 'website', 'phone', 'opening_hours', 'type',
+        'addr:housenumber', 'addr:street', 'addr:city', 'addr:postcode']
+overpass_normal_slim = overpass_normal_300[keep_cols]
+
+
+# Filter Overpass data down to OSM_ids in Geofabrik data
+geofabrik_place_ids = [str(i).strip("(',)") for i in arcpy.da.SearchCursor(combined_places_simple, 'osm_id')]
+# overpass_ids = overpass_normal_slim[overpass_normal_slim['id'].isin(geofabrik_place_ids)]
+overpass_normal_slim[['id']] = overpass_normal_slim[['id']].astype(str)
+overpass_ids = overpass_normal_slim[overpass_normal_slim['id'].isin(geofabrik_place_ids)]
+
+overpass_ids = overpass_ids.apply(calc_address, axis=1)
+
+# Pare columns down to those that will be joined, set as string type
+join_cols = ['id', 'amenity', 'cuisine', 'tourism', 'shop', 'website',
+              'phone', 'opening_hours', 'OSM_addr']
+overpass_to_join = overpass_ids[join_cols]
+# overpass_to_join[['id']] = overpass_to_join[['id']].astype(str)
+
+
+overpass_to_join.to_csv(overpass_csv)
+# Convert feature class to spatial data frame
+sdf = pd.DataFrame.spatial.from_featureclass(combined_places_simple)
+
+# Join data from Overpass dataframe
+sdf.merge(overpass_to_join, how='right', left_on='osm_id', right_on='id')
+
+sdf.spatial.to_featureclass(location=combined_places_final)
+
+# Clean up any leftover mess (fields, blanks, etc.)
+
+print("Time elapsed in Overpass function: {:.2f}s".format(time.time() - overpass_start_time))
+
 
 print("Script shutting down ...")
 # Stop timer and print end time in UTC
@@ -618,3 +691,31 @@ readable_end = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
 print("The script end time is {}".format(readable_end))
 print("Time elapsed: {:.2f}s".format(time.time() - start_time))
 
+
+
+
+
+
+api = overpass.head(50)
+test = overpass_normal_300.head(50)
+test = overpass_to_join.head(50)
+# test2 = test.iloc[:, : 100]
+
+# print(overpass_normal['type'].unique())
+# overpass.columns
+# bad = ['recycling', 'gnis', 'nps', 'tiger']
+# bad_cols = [c for c in overpass_normal.columns if any(x in c for x in bad)]
+
+# relations = overpass_small[overpass_small['type'] == 'relation']
+# overpass_small['type'].value_counts()
+
+# for i in geofabrik_place_ids:
+#     if i in overpass_normal_slim['id']:
+#         print(f'{i}: yes')
+#     else:
+#         print(f'{i}: no')
+        
+# overpass_normal_slim.loc['id'] == '99935206'
+
+# idx = overpass_normal_slim.index[overpass_normal_slim['id'] == '99935206'].tolist()
+# type(overpass_normal_slim.loc[31757]['id'])
