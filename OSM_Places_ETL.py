@@ -21,6 +21,7 @@ import wget
 import arcpy
 import requests
 import pandas as pd
+import numpy as np
 from arcgis.features import GeoAccessor, GeoSeriesAccessor
 
 
@@ -568,11 +569,16 @@ def add_overpass_fields():
     # Convert feature class to spatial data frame
     print("Converting working data to spatial dataframe ...")
     places_sdf = pd.DataFrame.spatial.from_featureclass(combined_places_simple)
-
+    
     # Join data from Overpass dataframe
     print("Joining Overpass data and exporting to FC ...")
-    places_sdf.merge(overpass_to_join, how='right', left_on='osm_id', right_on='id')
-
+    places_sdf = places_sdf.merge(overpass_to_join, how='left', left_on='osm_id', right_on='id')
+    
+    # Some final cleanup of columns and names, replace blanks in OSM_addr with NaNs/nulls, 
+    places_sdf.drop(['code', 'id'], axis=1, inplace=True)
+    places_sdf['OSM_addr'].replace(r'^\s*$', np.nan, regex=True, inplace=True)
+    places_sdf.rename(columns={'fclass': 'category'}, inplace=True)
+    
     # Export final SDF to FC
     places_sdf.spatial.to_featureclass(location=combined_places_final)
 
