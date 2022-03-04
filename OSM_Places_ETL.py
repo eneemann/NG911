@@ -152,7 +152,7 @@ def create_places():
                  "'attraction', 'bank', 'bakery', 'bar', 'beverages', 'butcher', 'cafe', 'camp_site', " \
                  "'car_dealership', 'car_wash', 'caravan_site', 'chemist', 'cinema', 'clothes', 'college', 'convenience', " \
                  "'courthouse', 'dentist', 'doctors', 'doityourself', 'embassy', 'fast_food', 'fire_station', 'florist', " \
-                 "'garden_centre', 'general', 'greengrocer', 'guesthouse', 'hairdresser', 'hospital', 'hostel', hotel', 'jeweller', 'kindergarten', " \
+                 "'garden_centre', 'general', 'greengrocer', 'guesthouse', 'hairdresser', 'hospital', 'hostel', 'hotel', 'jeweller', 'kindergarten', " \
                  "'laundry', 'library', 'mall', 'market_place', 'massage', 'memorial', 'monument', 'motel', 'museum', 'nightclub', " \
                  "'nursing_home', 'optician', 'park', 'pharmacy', 'picnic_site', 'post_office', 'police', 'pub', 'restaurant', 'ruins', " \
                  "'school', 'stationery', 'supermarket', 'swimming_pool', 'theatre', 'tourist_info', 'tower', 'town_hall', 'travel_agent', 'university', " \
@@ -460,19 +460,45 @@ def calc_fields():
     print("Time elapsed calculating fields: {:.2f}s".format(time.time() - calc_time))
 
 
+def final_numeric_check():
+    arcpy.AddField_management(combined_places_final, "Num_check", "TEXT", "", "", 10)
+    
+    # Filter out places with bad/numeric names (like '12C', 'Building 15', just a house number, etc.)
+        #        0        1
+    good_count = 0
+    bad_count = 0
+    fields = ['name', 'Num_check']
+    with arcpy.da.UpdateCursor(combined_places_final, fields) as update_cursor:
+        print("Looping through rows in FC to check for numeric place names ...")
+        for row in update_cursor:
+            check = numeric_check(row[0])
+            row[1] = check
+            if check == 'good':
+                good_count += 1
+                update_cursor.updateRow(row)
+            else:
+                bad_count += 1
+                update_cursor.deleteRow()
+                
+    print(f'Count of good place names found: {good_count}')
+    print(f'Count of bad place names found: {bad_count}')
+    
+    arcpy.management.DeleteField(combined_places_final, ['Num_check'])
+
+
 def delete_files():
-    ## Delete temporary and intermediate files
-    #print("Deleting copied SGID files ...")
-    #for file in SGID_files:
-    #    if arcpy.Exists(file):
-    #        print(f"Deleting {file} ...")
-    #        arcpy.management.Delete(file)
-    #
-    #print("Deleting temporary files ...")
-    #for file in temp_files:
-    #    if arcpy.Exists(file):
-    #        print(f"Deleting {file} ...")
-    #        arcpy.management.Delete(file)
+    # Delete temporary and intermediate files
+    print("Deleting copied SGID files ...")
+    for file in SGID_files:
+        if arcpy.Exists(file):
+            print(f"Deleting {file} ...")
+            arcpy.management.Delete(file)
+    
+    print("Deleting temporary files ...")
+    for file in temp_files:
+        if arcpy.Exists(file):
+            print(f"Deleting {file} ...")
+            arcpy.management.Delete(file)
     
     print("Deleting OSM shapefiles ...")
     arcpy.env.workspace = work_dir  
@@ -480,6 +506,23 @@ def delete_files():
     for fc in featureclasses:
         print(f"Deleting {fc} ...")
         arcpy.management.Delete(fc)
+
+
+
+# Get additional details from Overpass API
+
+# Filter Overpass data down to OSM_ids in Geofabrik data
+
+# Calculate OSM address
+
+# Convert Overpass table to arcpy table        
+
+
+# Join Overpass table to Geofabrik data
+        
+
+# Clean up any leftover mess (fields, blanks, etc.)
+
 
 
 # Call functions 
@@ -495,6 +538,7 @@ add_attributes()
 remove_duplicates()
 add_addresses()
 calc_fields()
+final_numeric_check()
 delete_files()
 
 
