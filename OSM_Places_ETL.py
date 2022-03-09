@@ -344,10 +344,10 @@ def assign_poly_attr(pts, polygonDict):
 def add_attributes():
     # Add fields
     print("Adding new fields to combined_places")
-    arcpy.management.AddField(combined_places, "county", "TEXT", "", "", 25)
-    arcpy.management.AddField(combined_places, "city", "TEXT", "", "", 50)
-    arcpy.management.AddField(combined_places, "zip", "TEXT", "", "", 5)
-    arcpy.management.AddField(combined_places, "block_id", "TEXT", "", "", 15)
+    arcpy.management.AddField(combined_places, "county", "TEXT", "", "", 25, field_alias="County")
+    arcpy.management.AddField(combined_places, "city", "TEXT", "", "", 50, field_alias="City")
+    arcpy.management.AddField(combined_places, "zip", "TEXT", "", "", 5, field_alias="Zip Code")
+    arcpy.management.AddField(combined_places, "block_id", "TEXT", "", "", 15, field_alias="Census Block ID")
     
     poly_dict = {
             'county': {'poly_path': county, 'poly_field': county_field},
@@ -425,7 +425,7 @@ def calc_fields():
 #    arcpy.management.AlterField(combined_places_simple, 'name', 'Name', 'Name')
     
     # Add disclaimer field
-    arcpy.management.AddField(combined_places_simple, "disclaimer", "TEXT", "", "", 150)
+    arcpy.management.AddField(combined_places_simple, "disclaimer", "TEXT", "", "", 150, field_alias="Disclaimer")
     
     calc_time = time.time()
     #                   0            1             2         3       4   
@@ -445,8 +445,8 @@ def calc_fields():
             update_cursor.updateRow(row)
     
     # Calculate lon/lat values for all points (WGS84 coords)
-    arcpy.management.AddField(combined_places_simple, 'lon', 'FLOAT', field_scale="6")
-    arcpy.management.AddField(combined_places_simple, 'lat', 'FLOAT', field_scale="6")
+    arcpy.management.AddField(combined_places_simple, 'lon', 'FLOAT', field_scale="6", field_alias="Longitude")
+    arcpy.management.AddField(combined_places_simple, 'lat', 'FLOAT', field_scale="6", field_alias="Latitude")
     arcpy.management.CalculateGeometryAttributes(combined_places_simple, [['lon', 'POINT_X'], ['lat', 'POINT_Y']], coordinate_format='DD')
     
     
