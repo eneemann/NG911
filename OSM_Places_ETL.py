@@ -122,12 +122,7 @@ def unzip(directory, file):
 # Download data from OSM via Geofabrik
 def download_osm():
     print(f"Downloading OSM data from {osm_url} ...")
-#    osm_file = wget.download(osm_url, work_dir)
-    osm_file = os.path.join(work_dir, 'zipfile.zip')
-    r = requests.get(osm_url, stream=True)
-    with open(osm_file, 'wb') as filewriter:
-        for chunk in r.iter_content():
-            filewriter.write(chunk)
+    osm_file = wget.download(osm_url, work_dir)
     unzip(work_dir, osm_file)
 
 
@@ -395,7 +390,7 @@ def remove_duplicates():
 
 
 def add_addresses():
-    # Add UGRC_near_addr from address points within 25 m
+    # Add ugrc_addr from address points within 25 m
     address_time = time.time()
     #addpt_path = addr    
     
@@ -423,7 +418,7 @@ def calc_fields():
     arcpy.management.DeleteField(combined_places_simple, ['Join_Count', 'TARGET_FID', ])
     
     # Rename FullAdd field and make other fields Title case
-    arcpy.management.AlterField(combined_places_simple, 'FullAdd', 'UGRC_near_addr', 'UGRC_near_addr')
+    arcpy.management.AlterField(combined_places_simple, 'FullAdd', 'ugrc_addr', 'ugrc_addr')
 #    arcpy.management.AlterField(combined_places_simple, 'osm_id', 'OSM_id', 'OSM_id')
 #    arcpy.management.AlterField(combined_places_simple, 'code', 'Code', 'Code')
 #    arcpy.management.AlterField(combined_places_simple, 'fclass', 'FClass', 'FClass')
@@ -434,7 +429,7 @@ def calc_fields():
     
     calc_time = time.time()
     #                   0            1             2         3       4   
-    calc_fields = ['UGRC_near_addr', 'addr_dist', 'disclaimer', 'city', 'zip']
+    calc_fields = ['ugrc_addr', 'addr_dist', 'disclaimer', 'city', 'zip']
     with arcpy.da.UpdateCursor(combined_places_simple, calc_fields) as update_cursor:
         print("Looping through rows in FC to calculate fields ...")
         for row in update_cursor:
@@ -589,6 +584,7 @@ def add_overpass_fields():
 
     print("Time elapsed in Overpass function: {:.2f}s".format(time.time() - overpass_start_time))
     
+
 
 # Call functions 
 download_osm()
