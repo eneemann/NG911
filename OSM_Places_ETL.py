@@ -33,7 +33,7 @@ today = time.strftime("%Y%m%d")
 
 
 # Set up directories
-# base_dir = r'C:\E911\2 - OSM Data'
+#base_dir = r'C:\E911\2 - OSM Data'
 base_dir = r'C:\Users\eneemann\Documents\E911\2 - OSM Data'  # Used on the Citrix machine
 # base_dir = r'\\itwfpcap2\AGRC\agrc\users\eneemann\Neemann\2 - OSM Data'  # Used for the L:Drive (from laptop)
 work_dir = os.path.join(base_dir, f'Utah_{today}')
@@ -122,7 +122,12 @@ def unzip(directory, file):
 # Download data from OSM via Geofabrik
 def download_osm():
     print(f"Downloading OSM data from {osm_url} ...")
-    osm_file = wget.download(osm_url, work_dir)
+#    osm_file = wget.download(osm_url, work_dir)
+    osm_file = os.path.join(work_dir, 'zipfile.zip')
+    r = requests.get(osm_url, stream=True)
+    with open(osm_file, 'wb') as filewriter:
+        for chunk in r.iter_content():
+            filewriter.write(chunk)
     unzip(work_dir, osm_file)
 
 
@@ -577,7 +582,7 @@ def add_overpass_fields():
     # Some final cleanup of columns and names, replace blanks in OSM_addr with NaNs/nulls, 
     places_sdf.drop(['code', 'id'], axis=1, inplace=True)
     places_sdf['OSM_addr'].replace(r'^\s*$', np.nan, regex=True, inplace=True)
-    places_sdf.rename(columns={'fclass': 'category'}, inplace=True)
+    places_sdf.rename(columns={'fclass': 'category', 'opening_hours': 'open_hours'}, inplace=True)
     
     # Export final SDF to FC
     places_sdf.spatial.to_featureclass(location=combined_places_final)
