@@ -44,7 +44,8 @@ law_working = os.path.join(ng911_db, 'NG911_Law_bound_working_' + today)
 # Read in text file of municipalities with PDs
 print("Reading in text file to get Municipalities with Police Departments ...")
 #textfile_dir = r'\\itwfpcap2\AGRC\agrc\data\ng911'
-textfile_dir = r'C:\Users\eneemann\Desktop\Neemann\NG911\NG911_project'
+#textfile_dir = r'C:\Users\eneemann\Desktop\Neemann\NG911\NG911_project'
+textfile_dir = r'C:\Users\eneemann\Desktop\Python Code\NG911'
 work_dir =r'C:\Users\eneemann\Desktop\Neemann\NG911\NG911_project'
 filename = os.path.join(textfile_dir, 'Munis_with_PDs.txt')
 with open(filename, 'r') as filehandle:
@@ -109,7 +110,7 @@ combos_temp = os.path.join(ng911_db, 'NG911_law_bound_combos_temp')
 combos_diss = os.path.join(ng911_db, 'NG911_law_bound_combos_diss')
 combos_join = os.path.join(ng911_db, 'NG911_law_bound_combos_join')
 SOs_holes = os.path.join(ng911_db, 'NG911_law_bound_SOs_holes')
-law_final = os.path.join(ng911_db, 'NG911_law_bound_final_' + today)
+law_final = os.path.join(ng911_db, 'NG911_law_bound_final_' + today)  #this layer goes in SGID
 law_wgs84 = os.path.join(ng911_db, 'NG911_law_bound_final_WGS84_' + today)
 
 ###############
