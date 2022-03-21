@@ -24,7 +24,7 @@ Key,PSAP,Type,Counties,Munis
 ,San Juan County Sheriff's Office,single county,SAN JUAN,
 ,Sanpete County Sheriff's Office,single county,SANPETE,
 ,Springville Public Safety,multi muni,,"SPRINGVILLE, MAPLETON"
-,St. George Police Department,single county,WASHINGTON,
+,St. George Police Department,unique,WASHINGTON,
 ,Summit County Sheriff's Office,single county,SUMMIT,
 ,Tooele County Sheriff's Office,single county,TOOELE,
 ,Uintah Basin Communications Center/State DPS,multi county,"DUCHESNE, UINTAH, DAGGETT",
