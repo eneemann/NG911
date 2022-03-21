@@ -20,6 +20,7 @@ print("The script start time is {}".format(readable_start))
 
 # Set up databases (SGID must be changed based on user's path)
 ng911_db = r"\\itwfpcap2\AGRC\agrc\data\ng911\SpatialStation_live_data\UtahNG911GIS.gdb"
+#ng911_db = r"C:\Users\eneemann\Desktop\Neemann\NG911\Arizona Data\UT_AZ_Border_PSAPs.gdb"
 error_db = r"C:\Users\eneemann\Desktop\Neemann\NG911\911 DataMaster\NG911_Data_Errors.gdb"
 
 arcpy.env.workspace = ng911_db
@@ -29,6 +30,7 @@ arcpy.env.qualifiedFieldNames = False
 today = time.strftime("%Y%m%d")
 
 rcls = os.path.join(ng911_db, r'RoadCenterlines')
+#rcls = os.path.join(ng911_db, r'AZNG911_RCL_in_Utah_PSAPs')
 rcls_working = os.path.join(error_db, f'RCL_errors_{today}')
 rcls_final = os.path.join(error_db, f'RCL_errors_only_{today}')
 rcls_final_name = f'RCL_errors_only_{today}'

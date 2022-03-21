@@ -21,6 +21,7 @@ print("The script start time is {}".format(readable_start))
 
 # Set up databases (SGID must be changed based on user's path)
 ng911_db = r"\\itwfpcap2\AGRC\agrc\data\ng911\SpatialStation_live_data\UtahNG911GIS.gdb"
+#ng911_db = r"C:\Users\eneemann\Desktop\Neemann\NG911\Arizona Data\UT_AZ_Border_PSAPs.gdb"
 error_db = r"C:\Users\eneemann\Desktop\Neemann\NG911\911 DataMaster\NG911_Data_Errors.gdb"
 
 arcpy.env.workspace = ng911_db
@@ -30,6 +31,7 @@ arcpy.env.qualifiedFieldNames = False
 today = time.strftime("%Y%m%d")
 
 addpts = os.path.join(ng911_db, r'AddressPoints')
+#addpts = os.path.join(ng911_db, r'AZNG911_SSAP_in_Utah_PSAPs')
 addpts_working = os.path.join(error_db, f'AddressPoints_errors_{today}')
 addpts_final = os.path.join(error_db, f'AddressPoints_errors_only_{today}')
 addpts_final_name = f'AddressPoints_errors_only_{today}'
