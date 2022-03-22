@@ -143,17 +143,17 @@ def export_sgid():
 
 #: Create intial set of point features from   
 def create_places():
-    #: Add queried POIs into Geodatabase
-    poi_query = "name NOT IN ('', ' ') AND (fclass IN ('archaeological', 'arts_centre', " \
-                 "'attraction', 'bank', 'bakery', 'bar', 'beverages', 'butcher', 'cafe', 'camp_site', " \
-                 "'car_dealership', 'car_wash', 'caravan_site', 'chemist', 'cinema', 'clothes', 'college', 'convenience', " \
-                 "'courthouse', 'dentist', 'doctors', 'doityourself', 'embassy', 'fast_food', 'fire_station', 'florist', " \
-                 "'garden_centre', 'general', 'greengrocer', 'guesthouse', 'hairdresser', 'hospital', 'hostel', 'hotel', 'jeweller', 'kindergarten', " \
-                 "'laundry', 'library', 'mall', 'market_place', 'massage', 'memorial', 'monument', 'motel', 'museum', 'nightclub', " \
-                 "'nursing_home', 'optician', 'park', 'pharmacy', 'picnic_site', 'post_office', 'police', 'pub', 'restaurant', 'ruins', " \
-                 "'school', 'stationery', 'supermarket', 'swimming_pool', 'theatre', 'tourist_info', 'tower', 'town_hall', 'travel_agent', 'university', " \
-                 "'vending_any', 'veterinary', 'viewpoint', 'zoo') OR fclass LIKE '%shop%' " \
-                 "OR fclass LIKE '%store%' OR fclass LIKE '%rental%' OR fclass LIKE '%centre%')"
+    #: Add queried POIs into Geodatabase   
+    poi_query = """name NOT IN ('', ' ') AND (fclass IN ('archaeological', 'arts_centre', 
+    'attraction', 'bank', 'bakery', 'bar', 'beverages', 'butcher', 'cafe', 'camp_site', 
+    'car_dealership', 'car_wash', 'caravan_site', 'chemist', 'cinema', 'clothes', 'college', 'convenience', 
+    'courthouse', 'dentist', 'doctors', 'doityourself', 'embassy', 'fast_food', 'fire_station', 'florist', 
+    'garden_centre', 'general', 'greengrocer', 'guesthouse', 'hairdresser', 'hospital', 'hostel', 'hotel', 
+    'jeweller', 'kindergarten', 'laundry', 'library', 'mall', 'market_place', 'massage', 'memorial', 'monument', 
+    'motel', 'museum', 'nightclub', 'nursing_home', 'optician', 'park', 'pharmacy', 'picnic_site', 'post_office',
+    'police', 'pub', 'restaurant', 'ruins', 'school', 'stationery', 'supermarket', 'swimming_pool', 'theatre', 
+    'tourist_info', 'tower', 'town_hall', 'travel_agent', 'university', 'vending_any', 'veterinary', 'viewpoint', 'zoo') 
+    OR fclass LIKE '%shop%' OR fclass LIKE '%store%' OR fclass LIKE '%rental%' OR fclass LIKE '%centre%')"""
         
     arcpy.conversion.FeatureClassToFeatureClass(pois, today_db, pois_FC_name, poi_query)
     arcpy.conversion.FeatureClassToFeatureClass(pois_FC, today_db, combined_places_name_WGS84)
@@ -165,15 +165,18 @@ def create_places():
     arcpy.management.Project(combined_places_WGS84, combined_places, sr)
     
     #: Add queried POI Areas into Geodatabase
-    poi_areas_query = "name NOT IN ('', ' ') AND (fclass IN ('archaeological', 'arts_centre', " \
-    "'attraction', 'bank', 'bakery', 'bar', 'beverages', 'butcher', 'cafe', 'camp_site', 'car_dealership', " \
-    "'car_wash', 'caravan_site', 'chemist', 'cinema', 'clothes', 'college', 'convenience', 'courthouse', 'dentist', 'doctors', 'doityourself', 'embassy', " \
-    "'fast_food', 'fire_station', 'florist', 'garden_centre', 'general', 'greengrocer', 'guesthouse', 'hairdresser', 'graveyard', 'hospital', 'hostel', " \
-    "'hotel', 'jeweller', 'kindergarten', 'laundry', 'library', 'mall', 'market_place', 'massage', 'memorial', 'monument', 'motel', 'museum', 'nightclub', " \
-    "'nursing_home', 'optician', 'park', 'playground', 'pharmacy', 'picnic_site', 'post_office', 'police', 'pub', 'restaurant', 'ruins', 'school', " \
-    "'shelter', 'stadium', 'stationery', 'supermarket', 'swimming_pool', 'theatre', 'tourist_info', 'tower', 'town_hall', 'travel_agent', 'university', " \
-    "'vending_any', 'veterinary', 'viewpoint', 'zoo') OR fclass LIKE '%shop%' OR fclass LIKE '%store%' OR fclass LIKE '%rental%' OR fclass LIKE '%centre%'" \
-    "OR (fclass = 'golf_course' AND name NOT IN ('', ' ') AND name NOT LIKE '%Hole%' AND name NOT LIKE '%hole%'))"
+    poi_areas_query = """name NOT IN ('', ' ') AND (fclass IN ('archaeological', 'arts_centre', 
+    'attraction', 'bank', 'bakery', 'bar', 'beverages', 'butcher', 'cafe', 'camp_site', 'car_dealership', 
+    'car_wash', 'caravan_site', 'chemist', 'cinema', 'clothes', 'college', 'convenience', 'courthouse', 'dentist', 
+    'doctors', 'doityourself', 'embassy', 'fast_food', 'fire_station', 'florist', 'garden_centre', 'general', 
+    'greengrocer', 'guesthouse', 'hairdresser', 'graveyard', 'hospital', 'hostel', 'hotel', 'jeweller', 
+    'kindergarten', 'laundry', 'library', 'mall', 'market_place', 'massage', 'memorial', 'monument', 'motel', 
+    'museum', 'nightclub', 'nursing_home', 'optician', 'park', 'playground', 'pharmacy', 'picnic_site', 
+    'post_office', 'police', 'pub', 'restaurant', 'ruins', 'school', 'shelter', 'stadium', 'stationery', 
+    'supermarket', 'swimming_pool', 'theatre', 'tourist_info', 'tower', 'town_hall', 'travel_agent', 'university', 
+    'vending_any', 'veterinary', 'viewpoint', 'zoo') OR fclass LIKE '%shop%' OR fclass LIKE '%store%' OR fclass LIKE 
+    '%rental%' OR fclass LIKE '%centre%' OR (fclass = 'golf_course' AND name NOT IN ('', ' ') AND 
+    name NOT LIKE '%Hole%' AND name NOT LIKE '%hole%'))"""
     
     arcpy.conversion.FeatureClassToFeatureClass(poi_areas, today_db, poi_areas_FC_name, poi_areas_query)
     arcpy.management.MakeFeatureLayer(poi_areas_FC, "poi_areas_lyr")
