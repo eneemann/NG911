@@ -133,9 +133,9 @@ def create_gdb():
 def export_sgid():
     export_time = time.time()
     for item in SGID_layers:
-        exported = item.rsplit('.', 1)[1]
+        exported = item.rsplit('.', 1)[-1]
         if arcpy.Exists(os.path.join(today_db, exported)):
-            arcpy.Delete_management(os.path.join(today_db, exported))
+            arcpy.management.Delete(os.path.join(today_db, exported))
         print(f"Exporting SGID {item} to: {exported}")
         arcpy.FeatureClassToFeatureClass_conversion (item, today_db, exported)     
     
@@ -330,6 +330,19 @@ def assign_poly_attr(pts, polygonDict):
 
 #: Add polygon attributes (county, city, zip, block_id)
 def add_attributes():
+    #: Delete features that are not in Utah
+    if arcpy.Exists("places_outside_utah"):
+        arcpy.management.Delete("places_outside_utah")
+    arcpy.management.MakeFeatureLayer(combined_places, "places_outside_utah")
+    arcpy.management.SelectLayerByLocation("places_outside_utah", "INTERSECT", county_path, "10 Meters", "NEW_SELECTION", "INVERT")
+    arcpy.management.DeleteFeatures("places_outside_utah")
+    
+    #: Running into issues with CensusBlocks, so exporting to shapefile
+    census_blocks_shp = os.path.join(work_dir, 'census_blocks.shp')
+    if not arcpy.Exists(census_blocks_shp):
+        print("Exporting CensusBlocks2020 to shapefile ...")
+        arcpy.FeatureClassToFeatureClass_conversion (block_path, work_dir, 'census_blocks.shp')   
+    
     #: Add fields to feature class
     print("Adding new fields to combined_places")
     arcpy.management.AddField(combined_places, "county", "TEXT", "", "", 25, field_alias="County")
@@ -342,7 +355,7 @@ def add_attributes():
             'county': {'poly_path': county, 'poly_field': county_field},
             'city': {'poly_path': city, 'poly_field': city_field},
             'zip': {'poly_path': zipcode, 'poly_field': zip_field},
-            'block_id': {'poly_path': block, 'poly_field': block_field}
+            'block_id': {'poly_path': census_blocks_shp, 'poly_field': block_field}
             }
     
     print("Populating new fields from polygons")
