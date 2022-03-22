@@ -417,7 +417,7 @@ def calc_fields():
             if row[0] is None:
                 row[1] = None
             else:
-                row[2] = 'ugrc_addr is NOT an official address.  Address based on nearest address point (within 25m) in UGRC database, addr_dist provides distance from named point.'
+                row[2] = 'ugrc_addr is NOT official, it is based on the nearest address point (within 25m) in UGRC database, addr_dist provides distance from actual point'
             if row[3] in ('', ' '):
                 row[3] = None
             if row[4] in ('', ' '):
