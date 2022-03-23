@@ -1,5 +1,6 @@
-#: file containing necessary credentials for running Sweeper
+#: file containing necessary credentials for running code
 psap_nguid.csv
+credentials.py
 
 *.bat
 *.pyc
