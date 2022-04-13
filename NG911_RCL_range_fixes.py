@@ -8,7 +8,6 @@ Script to fix UTRANS errors where RCLs are pointed in the wrong direction
 import arcpy
 import os
 import time
-from datetime import datetime
 import numpy as np
 
 # Start timer and print start time in UTC
@@ -22,7 +21,6 @@ print("The script start time is {}".format(readable_start))
 
 # Set up databases (SGID must be changed based on user's path)
 #utrans_db = r"Database Connections\eneemann@UTRANS@utrans.agrc.utah.gov.sde"
-#utrans_db = r'\\itwfpcap2\AGRC\agrc\users\eneemann\working\working_data.gdb'
 utrans_db = r'C:\Users\eneemann\Desktop\Neemann\working_data.gdb'
 
 arcpy.env.workspace = utrans_db
@@ -38,16 +36,11 @@ RCLs_backup = os.path.join(utrans_db, f'UTRANS_overlaps_20220413_{today}')
 ## Make a copy of the data to work on
 #arcpy.management.CopyFeatures(RCLs, RCLs_backup)
 
-# Get the spatial reference for later use
-sr = arcpy.Describe(RCLs).spatialReference
-print(sr)
-
 # Get list of global_ids that have range overlaps
 global_ids = [str(i).strip("(',)") for i in arcpy.da.SearchCursor(RCLs, 'GlobalID')]
 
 # Get list of overlapping global_ids to compare against 'global_ids' list
 overlap_ids = [str(i).strip("(',)").split() for i in arcpy.da.SearchCursor(RCLs, 'CUSTOMTAGS')]
-#overlap_ids = [str(item).strip("(',)") for sublist in overlap_ids for item in sublist if '{' in item]
 overlap_ids_clean = []
 for l in overlap_ids:
     l = list(set([str(item).strip("(',)") for item in l if '{' in item]))
@@ -60,7 +53,6 @@ for i in np.arange(len(global_ids)):
     for item in overlap_ids_clean[i]:
         temp1 = [global_ids[i]]
         temp1.append(item)
-#        print(temp1)
         combos_of_two.append(temp1)
 
 
@@ -74,17 +66,10 @@ combo_count = 0
 print("Looping through combos to flag segments that need corrections...")
 for combo in combos_of_two:
     combo_count += 1
-#    if combo_count == 100:
-#        break
     if combo_count % 1000 == 0:
         print(f'working on combo {combo_count}')
-        #query = "TOADDR_L <> 0 AND TOADDR_R <> 0"
     d = {}
-#    query = f"GlobalID IN ({','.join([str(id).strip('[]') for id in combos_of_two])}) AND CUSTOMTAGS LIKE '%overlap%' and CUSTOMTAGS NOT LIKE '%fixed%' and CUSTOMTAGS NOT LIKE '%okay%'"
-#    query = f"GlobalID IN ('{','.join([id for id in combo])}') AND CUSTOMTAGS LIKE '%overlap%' and CUSTOMTAGS NOT LIKE '%fixed%' and CUSTOMTAGS NOT LIKE '%okay%'"
     query = f"GlobalID IN ('{combo[0]}', '{combo[1]}') AND CUSTOMTAGS LIKE '%overlap%' and CUSTOMTAGS NOT LIKE '%fixed%' and CUSTOMTAGS NOT LIKE '%okay%'"
-#    query = f"GlobalID IN ({combo[0]}, {combo[1]}) AND CUSTOMTAGS LIKE '%overlap%' and CUSTOMTAGS NOT LIKE '%fixed%' and CUSTOMTAGS NOT LIKE '%okay%'"
-#    print(query)
     #             0           1          2             3           4             5            6
     fields = ['GlobalID', 'SHAPE@', 'CUSTOMTAGS', 'FROMADDR_L', 'TOADDR_L', 'FROMADDR_R', 'TOADDR_R']
     count = [row for row in arcpy.da.SearchCursor(RCLs, fields, query)]
@@ -94,7 +79,6 @@ for combo in combos_of_two:
         continue
     with arcpy.da.SearchCursor(RCLs, fields, query) as search_cursor:
         seg_count = 1
-#        d = {}
         for row in search_cursor:
             shape_obj = row[1]
             d.update(
@@ -114,24 +98,25 @@ for combo in combos_of_two:
     touching = False
     fix_left = False
     fix_right = False
-#    print(f"{d['end_1']}, {d['start_2']}      {d['start_1']}, {d['end_2']}")
+    
     if d['end_1'] == d['start_2'] or d['start_1'] == d['end_2']:
         touching = True
-#    print(f'segments are touching: {touching}')
     
-    # check ranges to see if start or end of ranges match
+    # Check ranges to see if start or end of ranges match, if so, segment needs fixed
     if touching:
         if d['to_L_1'] == d['from_L_2'] or d['from_L_1'] == d['to_L_2']:
             fix_left = True
         if d['to_R_1'] == d['from_R_2'] or d['from_R_1'] == d['to_R_2']:
             fix_right = True
-            
+    
+    # Append guid for left side fixes, segment with lowest fromaddr will get fixed        
     if fix_left:
         if d['from_L_1'] < d['from_L_2']:
             guids_to_fix_L.append(d['guid_1'])
         elif d['from_L_2'] < d['from_L_2']:
             guids_to_fix_L.append(d['guid_2'])
-            
+    
+    # Append guid for right side fixes, segment with lowest fromaddr will get fixed       
     if fix_right:
         if d['from_R_1'] < d['from_R_2']:
             guids_to_fix_R.append(d['guid_1'])
@@ -146,6 +131,7 @@ guids_to_fix_L = list(set(guids_to_fix_L))
 guids_to_fix_R = list(set(guids_to_fix_R))    
 total = len(guids_to_fix_L) + len(guids_to_fix_R)
 
+# Time hack
 print("Time elapsed identifying fixes: {:.2f}s".format(time.time() - start_time))
 fix_time = time.time()
 
@@ -158,9 +144,7 @@ fix_time = time.time()
 fixes = []
 fix_count = 0
 # Loop through flagged segments and apply range decreases
-#query = "TOADDR_L <> 0 AND TOADDR_R <> 0"
 sql = f"""GlobalID IN ('{"', '".join([str(guid) for guid in all_guids_to_fix])}') AND CUSTOMTAGS LIKE '%overlap%' and CUSTOMTAGS NOT LIKE '%fixed%' and CUSTOMTAGS NOT LIKE '%okay%'"""
-#print(sql)
 #             0            1            2             3           4             5            6
 fields = ['GlobalID', 'CUSTOMTAGS', 'FROMADDR_L', 'TOADDR_L', 'FROMADDR_R', 'TOADDR_R']
 with arcpy.da.UpdateCursor(RCLs, fields, sql) as update_cursor:
