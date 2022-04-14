@@ -162,6 +162,7 @@ edit.startOperation()
 
 fixes = []
 fix_count = 0
+small_range = 0
 # Loop through flagged segments and apply range decreases
 sql = f"""GlobalID IN ('{"', '".join([str(guid) for guid in all_guids_to_fix])}') AND CUSTOMTAGS LIKE '%overlap%' and CUSTOMTAGS NOT LIKE '%fixed%' and CUSTOMTAGS NOT LIKE '%okay%'"""
 #             0            1            2             3           4             5            6
@@ -175,22 +176,28 @@ with arcpy.da.UpdateCursor(RCLs, fields, sql) as update_cursor:
         if 'fixed' in tags:
             print(f'fixes already made on {gid}')
             continue
-        if gid in guids_to_fix_L:
+        if gid in guids_to_fix_L and (row[3]-2) > row[2]:
             side = 'left'
             row[3] = row[3] - 2
-        if gid in guids_to_fix_R:
+        else:
+            print('range is too small to decrease TOADDR_L')
+            small_range += 1
+        if gid in guids_to_fix_R and (row[5]-2) > row[4]:
             if len(side) > 3:
                 side += ' right'
             else:
                 side = 'right'
             row[5] = row[5] - 2
+        else:
+            print('range is too small to decrease TOADDR_R')
+            small_range += 1
 
         tags = tags + f' pythonfixed {side} ' + time.strftime('%m/%d/%Y')
         row[1] = tags
         update_cursor.updateRow(row)
 
-print(f"Total number of checks is: {total}")
-
+print(f"Total number of fixes to check on: {total}")
+print(f"Number of small range segments found and skipped: {small_range}")
 
 print("Time elapsed applying the fixes: {:.2f}s".format(time.time() - fix_time))
     
