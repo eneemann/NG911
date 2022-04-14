@@ -3,6 +3,8 @@
 Created on Mon Aug 30 13:01:42 2021
 @author: eneemann
 Script to fix UTRANS errors where RCLs are pointed in the wrong direction
+
+Uses Python 2 and ArcCatalog Database Connection
 """
 
 import arcpy
