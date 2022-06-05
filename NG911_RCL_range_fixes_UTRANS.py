@@ -22,7 +22,7 @@ print("The script start time is {}".format(readable_start))
 ######################
 
 # Set up databases (SGID must be changed based on user's path)
-#utrans_db = r"Database Connections\eneemann@UTRANS@utrans.agrc.utah.gov.sde"
+# utrans_db = r"Database Connections\eneemann@UTRANS@utrans.agrc.utah.gov.sde"
 utrans_db = r'C:\Users\eneemann\AppData\Roaming\Esri\ArcGISPro\Favorites\eneemann@UTRANS@utrans.agrc.utah.gov.se.sde'
 
 arcpy.env.workspace = utrans_db
@@ -38,20 +38,31 @@ RCLs = os.path.join(utrans_db, r'UTRANS.TRANSADMIN.Centerlines_Edit\UTRANS.TRANS
 
 # Get list of global_ids that have range overlaps
 id_query = "CUSTOMTAGS LIKE '%overlap%' and CUSTOMTAGS NOT LIKE '%fixed%' and CUSTOMTAGS NOT LIKE '%okay'"
-global_ids = [str(i).strip("(',)") for i in arcpy.da.SearchCursor(RCLs, 'GlobalID', id_query)]
+# global_ids = [str(i).strip("(',)") for i in arcpy.da.SearchCursor(RCLs, 'GlobalID', id_query)]
 
-# Get list of overlapping global_ids to compare against 'global_ids' list
-overlap_ids = [str(i).strip("(',)").split() for i in arcpy.da.SearchCursor(RCLs, 'CUSTOMTAGS', id_query)]
-overlap_ids_clean = []
-for l in overlap_ids:
+# Get list of global_ids and overlap_ids from CUSTOMTAGS
+guids_and_tags = [str(i).replace('range overlap with', '').strip("(',)").split() for i in arcpy.da.SearchCursor(RCLs, ['GlobalID', 'CUSTOMTAGS'], id_query)]
+guids_and_tags_clean = []
+for l in guids_and_tags:
     l = list(set([str(item).strip("(',)") for item in l if '{' in item]))
-    overlap_ids_clean.append(l)
+    guids_and_tags_clean.append(l)
+
+# Separate them into different lists
+global_ids = [item[0] for item in guids_and_tags_clean]
+overlap_ids = [item[1:] for item in guids_and_tags_clean]
+
+# # Get list of overlapping global_ids to compare against 'global_ids' list
+# overlap_ids = [str(i).strip("(',)").split() for i in arcpy.da.SearchCursor(RCLs, 'CUSTOMTAGS', id_query)]
+# overlap_ids_clean = []
+# for l in overlap_ids:
+#     l = list(set([str(item).strip("(',)") for item in l if '{' in item]))
+#     overlap_ids_clean.append(l)
 
 # Merge lists into two-global_id combinations to check for connectivity and overlaps
 combos_of_two = []
 print(len(global_ids))
 for i in np.arange(len(global_ids)):
-    for item in overlap_ids_clean[i]:
+    for item in overlap_ids[i]:
         temp1 = [global_ids[i]]
         temp1.append(item)
         combos_of_two.append(temp1)
@@ -62,11 +73,14 @@ guids_to_fix_L = []
 guids_to_fix_R = []
 
 missing_guid = 0
+touches = 0
 # Loop through data and flag segments for toaddr_l decreases
 combo_count = 0
 print("Looping through combos to flag segments that need corrections...")
 for combo in combos_of_two:
     combo_count += 1
+    # if combo_count == 20:
+    #     break
     if combo_count % 1000 == 0:
         print(f'working on combo {combo_count}')
     d = {}
@@ -105,6 +119,7 @@ for combo in combos_of_two:
     
     # Check ranges to see if start or end of ranges match, if so, segment needs fixed
     if touching:
+        touches += 1
         if d['to_L_1'] == d['from_L_2'] or d['from_L_1'] == d['to_L_2']:
             fix_left = True
         if d['to_R_1'] == d['from_R_2'] or d['from_R_1'] == d['to_R_2']:
@@ -125,12 +140,15 @@ for combo in combos_of_two:
             guids_to_fix_R.append(d['guid_2'])
 
 print(f"Total number of missing guids: {missing_guid}")
+print(f"Total number of touching segments: {touches}")
+
                   
 # Get list of all guids to update values on
 all_guids_to_fix = list(set(guids_to_fix_L + guids_to_fix_R))
 guids_to_fix_L = list(set(guids_to_fix_L))
 guids_to_fix_R = list(set(guids_to_fix_R))    
 total = len(guids_to_fix_L) + len(guids_to_fix_R)
+print(f"Number of guids to fix: {len(all_guids_to_fix)}")
 
 # Time hack
 print("Time elapsed identifying fixes: {:.2f}s".format(time.time() - start_time))
@@ -144,6 +162,7 @@ edit.startOperation()
 
 fixes = []
 fix_count = 0
+small_range = 0
 # Loop through flagged segments and apply range decreases
 sql = f"""GlobalID IN ('{"', '".join([str(guid) for guid in all_guids_to_fix])}') AND CUSTOMTAGS LIKE '%overlap%' and CUSTOMTAGS NOT LIKE '%fixed%' and CUSTOMTAGS NOT LIKE '%okay%'"""
 #             0            1            2             3           4             5            6
@@ -157,22 +176,28 @@ with arcpy.da.UpdateCursor(RCLs, fields, sql) as update_cursor:
         if 'fixed' in tags:
             print(f'fixes already made on {gid}')
             continue
-        if gid in guids_to_fix_L:
+        if gid in guids_to_fix_L and (row[3]-2) > row[2]:
             side = 'left'
             row[3] = row[3] - 2
-        if gid in guids_to_fix_R:
+        else:
+            print('range is too small to decrease TOADDR_L')
+            small_range += 1
+        if gid in guids_to_fix_R and (row[5]-2) > row[4]:
             if len(side) > 3:
                 side += ' right'
             else:
                 side = 'right'
             row[5] = row[5] - 2
+        else:
+            print('range is too small to decrease TOADDR_R')
+            small_range += 1
 
         tags = tags + f' pythonfixed {side} ' + time.strftime('%m/%d/%Y')
         row[1] = tags
         update_cursor.updateRow(row)
 
-print(f"Total number of checks is: {total}")
-
+print(f"Total number of fixes to check on: {total}")
+print(f"Number of small range segments found and skipped: {small_range}")
 
 print("Time elapsed applying the fixes: {:.2f}s".format(time.time() - fix_time))
     
