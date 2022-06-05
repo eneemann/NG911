@@ -344,57 +344,6 @@ def add_mixed_psaps():
     arcpy.management.Append(mixed_diss, all_mixed_temp, "NO_TEST")    
 
 
-def add_single_muni():
-    # Build single muni PSAP boundaries from muni boundaries
-    print("Building single muni PSAPs from muni boundaries ...")
-    arcpy.management.CopyFeatures(psap_schema, single_muni_temp)
-    if arcpy.Exists("muni_lyr"):
-        arcpy.management.Delete("muni_lyr")
-    arcpy.management.MakeFeatureLayer(munis, "muni_lyr")
-    
-    # Field Map muni name into psap schema fields
-    fms = arcpy.FieldMappings()
-    
-    # NAME to DsplayName
-    fm_name = arcpy.FieldMap()
-    fm_name.addInputField("muni_lyr", "NAME")
-    output = fm_name.outputField
-    output.name = "DsplayName"
-    fm_name.outputField = output
-    fms.addFieldMap(fm_name)
-    
-    # Complete the append with field mapping and query
-    sm_list = list(single_muni_dict.values())
-    print(sm_list)
-    sm_query = f"NAME IN ({sm_list})".replace('[', '').replace(']', '')
-    print(sm_query)
-    
-    arcpy.management.Append("muni_lyr", single_muni_temp, "NO_TEST", field_mapping=fms, expression=sm_query)
-    
-    # Populate fields with correct information
-    update_count = 0
-    fields = ['DsplayName']
-    with arcpy.da.UpdateCursor(single_muni_temp, fields) as update_cursor:
-        print("Looping through rows in FC ...")
-        for row in update_cursor:
-            for k,v in single_muni_dict.items():
-                if v == row[0]:
-                    row[0] = k
-            update_count += 1
-            update_cursor.updateRow(row)
-    print(f"Total count of single muni updates is: {update_count}")
-    
-    # Drop in single muni psaps via erase/append
-    # temp = os.path.join(ng911_db, 'NG911_psap_all_county_holes')
-    # arcpy.management.CopyFeatures(all_county_temp, temp)
-    # 'in_memory\\all_county_holes'
-    print("Adding single muni PSAPs into working psaps layer ...")
-    # Erase
-    arcpy.analysis.Erase(all_mixed_temp, single_muni_temp, county_single_muni_temp)
-    # Append
-    arcpy.management.Append(single_muni_temp, county_single_muni_temp, "NO_TEST")
-
-
 def add_multi_muni():
     # Build multi muni PSAP boundaries from muni boundaries
     print("Building multi muni PSAPs from muni boundaries ...")
@@ -445,7 +394,7 @@ def add_multi_muni():
     # Drop in multi muni psaps via erase/append
     print("Adding multi muni PSAPs into working psaps layer ...")
     # Erase
-    arcpy.analysis.Erase(county_single_muni_temp, mm_diss, all_county_muni_temp)
+    arcpy.analysis.Erase(all_mixed_temp, mm_diss, all_county_muni_temp)
     # Append
     arcpy.management.Append(mm_diss, all_county_muni_temp, "NO_TEST")
     
@@ -518,7 +467,7 @@ def add_unique_psaps():
     
     # Complete the append with field mapping and query to create county layer
     arcpy.management.Append("county_lyr", unique_county_temp, "NO_TEST", field_mapping=fms, expression=unic_query)
-    
+
     
 #    # Erase current county layer with buffer
 #    arcpy.analysis.Erase(unique_county_temp, 'in_memory\\edge_county_buffer', unique_county_erased)
@@ -578,14 +527,65 @@ def add_unique_psaps():
     arcpy.analysis.Erase(all_county_muni_temp, unique_diss, all_unique_temp)
     # Append
     arcpy.management.Append(unique_diss, all_unique_temp, "NO_TEST") 
-     
+
+
+def add_single_muni():
+    # Build single muni PSAP boundaries from muni boundaries
+    print("Building single muni PSAPs from muni boundaries ...")
+    arcpy.management.CopyFeatures(psap_schema, single_muni_temp)
+    if arcpy.Exists("muni_lyr"):
+        arcpy.management.Delete("muni_lyr")
+    arcpy.management.MakeFeatureLayer(munis, "muni_lyr")
+    
+    # Field Map muni name into psap schema fields
+    fms = arcpy.FieldMappings()
+    
+    # NAME to DsplayName
+    fm_name = arcpy.FieldMap()
+    fm_name.addInputField("muni_lyr", "NAME")
+    output = fm_name.outputField
+    output.name = "DsplayName"
+    fm_name.outputField = output
+    fms.addFieldMap(fm_name)
+    
+    # Complete the append with field mapping and query
+    sm_list = list(single_muni_dict.values())
+    print(sm_list)
+    sm_query = f"NAME IN ({sm_list})".replace('[', '').replace(']', '')
+    print(sm_query)
+    
+    arcpy.management.Append("muni_lyr", single_muni_temp, "NO_TEST", field_mapping=fms, expression=sm_query)
+    
+    # Populate fields with correct information
+    update_count = 0
+    fields = ['DsplayName']
+    with arcpy.da.UpdateCursor(single_muni_temp, fields) as update_cursor:
+        print("Looping through rows in FC ...")
+        for row in update_cursor:
+            for k,v in single_muni_dict.items():
+                if v == row[0]:
+                    row[0] = k
+            update_count += 1
+            update_cursor.updateRow(row)
+    print(f"Total count of single muni updates is: {update_count}")
+    
+    # Drop in single muni psaps via erase/append
+    # temp = os.path.join(ng911_db, 'NG911_psap_all_county_holes')
+    # arcpy.management.CopyFeatures(all_county_temp, temp)
+    # 'in_memory\\all_county_holes'
+    print("Adding single muni PSAPs into working psaps layer ...")
+    # Erase
+    arcpy.analysis.Erase(all_unique_temp, single_muni_temp, county_single_muni_temp)
+    # Append
+    arcpy.management.Append(single_muni_temp, county_single_muni_temp, "NO_TEST")
+    
     
 def calc_fields(): 
     # Loop through and populate fields with appropriate information
     update_count = 0
         #          0           1           2           3          4            5           6             7          8
     fields = ['DsplayName', 'Source', 'DateUpdate', 'State', 'ServiceNum', 'ES_NGUID', 'OBJECTID', 'ServiceURI', 'County']
-    with arcpy.da.UpdateCursor(all_unique_temp, fields) as update_cursor:
+    with arcpy.da.UpdateCursor(county_single_muni_temp, fields) as update_cursor:
         print("Looping through rows in FC ...")
         for row in update_cursor:
             row[1] = 'UGRC'
@@ -606,11 +606,11 @@ def build_sgid():
     if arcpy.Exists(sgid_final):
         arcpy.management.Delete(sgid_final)
     
-    joined_data = arcpy.management.JoinField(all_unique_temp, "DsplayName", sgid_data_table, "DsplayName")
+    joined_data = arcpy.management.JoinField(county_single_muni_temp, "DsplayName", sgid_data_table, "DsplayName")
     # Remove extra field from join
-    arcpy.management.DeleteField(all_unique_temp, "DsplayName_1")
+    arcpy.management.DeleteField(county_single_muni_temp, "DsplayName_1")
     
-    # Copy sgid data table to all_unique_temp feature class
+    # Copy sgid data table to county_single_muni_temp feature class
     # This is a copy of the PSAP Boundaries feature class with all fields for SGID
     arcpy.management.CopyFeatures(joined_data, sgid_final)
     
@@ -627,7 +627,7 @@ def remove_nested_holes():
     if arcpy.Exists("nested_lyr"):
         arcpy.management.Delete("nested_lyr")
     nested_query = f"DsplayName IN ({nested_list})".replace('[', '').replace(']', '')
-    arcpy.management.MakeFeatureLayer(all_unique_temp, "nested_lyr", nested_query)
+    arcpy.management.MakeFeatureLayer(county_single_muni_temp, "nested_lyr", nested_query)
     arcpy.management.CopyFeatures("nested_lyr", nested_temp)
     
     # Explode nested features into singlepart features
@@ -636,7 +636,7 @@ def remove_nested_holes():
     # Drop nested fixes back in via erase/append
     print("Adding nested PSAPs back into working psaps layer ...")
     # Erase
-    arcpy.analysis.Erase(all_unique_temp, nested_fixes, all_fixed_temp)
+    arcpy.analysis.Erase(county_single_muni_temp, nested_fixes, all_fixed_temp)
     # Append
     arcpy.management.Append(nested_fixes, all_fixed_temp, "NO_TEST") 
 
@@ -700,9 +700,10 @@ function_time = time.time()
 add_single_county()
 add_multi_county()
 add_mixed_psaps()
-add_single_muni()
+#add_single_muni()
 add_multi_muni()
 add_unique_psaps()
+add_single_muni()
 calc_fields()
 build_sgid()
 remove_nested_holes()
