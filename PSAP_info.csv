@@ -15,9 +15,8 @@ Key,PSAP,Type,Counties,Munis
 ,Layton City Police Department,single muni,,LAYTON
 ,Logan City Communications Center,single county,CACHE,
 ,Millard County Sheriff's Office,single county,MILLARD,
-,Orem City Department of Public Safety,multi muni,,"OREM, LINDON"
 ,Price Communications Center/State DPS,single county,CARBON,
-,Provo City Police/Fire/EMS,unique,,PROVO
+,Provo City Police/Fire/EMS,unique,,"PROVO, OREM, LINDON"
 ,Rich County Sheriff's Office,single county,RICH,
 ,Richfield Communications Center/State DPS,mixed,"SEVIER, PIUTE, WAYNE",ANTIMONY
 ,Salt Lake City 911 Communications Bureau,unique,,"SALT LAKE CITY, SANDY"
