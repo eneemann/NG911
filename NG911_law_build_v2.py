@@ -309,8 +309,8 @@ def correct_names():
 def calc_fields(): 
     # Loop through and populate fields with appropriate information
     update_count = 0
-        #          0           1           2           3          4            5           6         7 
-    fields = ['DsplayName', 'Source', 'DateUpdate', 'State', 'ServiceNum', 'ES_NGUID', 'OBJECTID', 'NAME']
+        #          0           1           2           3          4            5           6         7          8
+    fields = ['DsplayName', 'Source', 'DateUpdate', 'State', 'ServiceNum', 'ES_NGUID', 'OBJECTID', 'NAME', 'DiscrpAgID']
     with arcpy.da.UpdateCursor(law_final, fields) as update_cursor:
         print("Looping through rows in FC ...")
         for row in update_cursor:
@@ -326,6 +326,7 @@ def calc_fields():
                 row[7] = row[0].replace('SHERIFFS OFFICE', 'SO')
             else:
                 row[7] = row[0]
+            row[8] = 'gis.utah.gov/data/911'
             update_count += 1
             update_cursor.updateRow(row)
     print(f"Total count of attribute updates is: {update_count}")

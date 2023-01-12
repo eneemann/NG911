@@ -583,8 +583,8 @@ def add_unique_psaps():
 def calc_fields(): 
     # Loop through and populate fields with appropriate information
     update_count = 0
-        #          0           1           2           3          4            5           6             7          8
-    fields = ['DsplayName', 'Source', 'DateUpdate', 'State', 'ServiceNum', 'ES_NGUID', 'OBJECTID', 'ServiceURI', 'County']
+        #          0           1           2           3          4            5           6             7          8           9
+    fields = ['DsplayName', 'Source', 'DateUpdate', 'State', 'ServiceNum', 'ES_NGUID', 'OBJECTID', 'ServiceURI', 'County', 'DiscrpAgID']
     with arcpy.da.UpdateCursor(all_unique_temp, fields) as update_cursor:
         print("Looping through rows in FC ...")
         for row in update_cursor:
@@ -597,6 +597,7 @@ def calc_fields():
             row[5] = nguid_dict[f'{row[0]}']
             row[7] = uri_dict[f'{row[0]}']
             row[8] = county_dict[f'{row[0]}']
+            row[9] = 'gis.utah.gov/data/911'
             update_count += 1
             update_cursor.updateRow(row)
     print(f"Total count of attribute updates is: {update_count}")
