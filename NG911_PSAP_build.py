@@ -451,7 +451,7 @@ def add_multi_muni():
     
     
 def add_unique_psaps():
-    # Assemble VECC, Provo based on mixed boundaries and append static boundaries (Hill AFB -- NN not longer used)
+    # Assemble VECC, Metro EC based on mixed boundaries and append static boundaries (Hill AFB -- Navajo Nation not longer used)
     print("Building unique PSAPs from county, muni, and fixed boundaries ...")
     arcpy.management.CopyFeatures(psap_schema, unique_muni_temp)
     arcpy.management.CopyFeatures(psap_schema, unique_county_temp)
