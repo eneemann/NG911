@@ -334,7 +334,7 @@ def calc_fields():
 
 def repair_geometry():
     print("Checking geometry ...")
-    arcpy.management.CheckGeometry(law_final, 'in_memory\\error_table', 'ESRI')
+    arcpy.management.CheckGeometry(law_final, 'in_memory\\error_table', 'OGC')
     error_count = arcpy.management.GetCount('in_memory\\error_table')[0]
     print(f"Total count of geometry errors found: {error_count}")
     
@@ -352,10 +352,10 @@ def repair_geometry():
                 print(f'OID {row[0]}: {row[1]}')
         
         print("Repairing geometry ...")
-        arcpy.management.RepairGeometry(law_final, 'DELETE_NULL', 'ESRI')
+        arcpy.management.RepairGeometry(law_final, 'DELETE_NULL', 'OGC')
     
         print("Rechecking geometry ...")
-        arcpy.management.CheckGeometry(law_final, 'in_memory\\error_table_2', 'ESRI')
+        arcpy.management.CheckGeometry(law_final, 'in_memory\\error_table_2', 'OGC')
         error_count_2 = arcpy.management.GetCount('in_memory\\error_table_2')[0]
         print(f"Remaining geometry errors found: {error_count_2}")
         
@@ -370,7 +370,7 @@ def project_to_WGS84():
     arcpy.management.Project(law_final, law_wgs84, sr, "WGS_1984_(ITRF00)_To_NAD_1983")
     
     print("Checking WGS84 geometry ...")
-    arcpy.management.CheckGeometry(law_wgs84, 'in_memory\\error_table_3', 'ESRI')
+    arcpy.management.CheckGeometry(law_wgs84, 'in_memory\\error_table_3', 'OGC')
     error_count_3 = arcpy.management.GetCount('in_memory\\error_table_3')[0]
     print(f"Total count of WGS84 geometry errors found: {error_count_3}")
     
@@ -388,10 +388,10 @@ def project_to_WGS84():
                 print(f'OID {row[0]}: {row[1]}')
         
         print("Repairing WGS84 geometry ...")
-        arcpy.management.RepairGeometry(law_wgs84, 'DELETE_NULL', 'ESRI')
+        arcpy.management.RepairGeometry(law_wgs84, 'DELETE_NULL', 'OGC')
     
         print("Rechecking WGS84 geometry ...")
-        arcpy.management.CheckGeometry(law_wgs84, 'in_memory\\error_table_4', 'ESRI')
+        arcpy.management.CheckGeometry(law_wgs84, 'in_memory\\error_table_4', 'OGC')
         error_count_4 = arcpy.management.GetCount('in_memory\\error_table_4')[0]
         print(f"Remaining WGS84 geometry errors found: {error_count_4}")
         
