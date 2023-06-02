@@ -23,9 +23,6 @@ print("The script start time is {}".format(readable_start))
 
 # Set up databases (SGID must be changed based on user's path)
 SGID = r"C:\Users\eneemann\AppData\Roaming\ESRI\ArcGISPro\Favorites\internal@SGID@internal.agrc.utah.gov.sde"
-# ng911_db = r"\\itwfpcap2\AGRC\agrc\data\ng911\NG911_boundary_work.gdb"
-# ng911_db = r"C:\Users\eneemann\Desktop\Neemann\NG911\NG911_project\NG911_project.gdb"
-#ng911_db = r"C:\Users\eneemann\Desktop\Neemann\NG911\NG911_project\NG911_boundary_work_testing.gdb"
 ng911_db = r"C:\Users\eneemann\Desktop\Neemann\NG911\NG911_project\NG911_data_updates.gdb"
 
 arcpy.env.workspace = ng911_db
@@ -39,7 +36,6 @@ counties = os.path.join(ng911_db, f'SGID_counties_{today}')
 SGID_munis = os.path.join(SGID, 'SGID.BOUNDARIES.Municipalities')
 munis = os.path.join(ng911_db, f'SGID_munis_{today}')
 unique = os.path.join(ng911_db, 'NG911_PSAP_unique_UTM')
-# psap_schema = os.path.join(ng911_db, 'NG911_PSAP_Schema_simple')
 psap_schema = os.path.join(ng911_db, 'NG911_PSAP_Schema')
 psap_working = os.path.join(ng911_db, f'NG911_PSAP_bound_working_{today}')
 
@@ -48,8 +44,6 @@ nested_list = ['Salt Lake Valley Emergency Communications Center', 'Central Utah
 
 # Read in CSV of PSAP info into pandas dataframe, use df to build dictionaries
 print("Reading in CSV to get PSAP info ...")
-# textfile_dir = r'\\itwfpcap2\AGRC\agrc\data\ng911'
-# textfile_dir = r'C:\Users\eneemann\Desktop\Neemann\NG911\NG911_project'
 textfile_dir = r'C:\Users\eneemann\Desktop\Python Code\NG911'
 work_dir =r'C:\Users\eneemann\Desktop\Neemann\NG911\NG911_project'
 
@@ -385,9 +379,6 @@ def add_single_muni():
     print(f"Total count of single muni updates is: {update_count}")
     
     # Drop in single muni psaps via erase/append
-    # temp = os.path.join(ng911_db, 'NG911_psap_all_county_holes')
-    # arcpy.management.CopyFeatures(all_county_temp, temp)
-    # 'in_memory\\all_county_holes'
     print("Adding single muni PSAPs into working psaps layer ...")
     # Erase
     arcpy.analysis.Erase(all_mixed_temp, single_muni_temp, county_single_muni_temp)
@@ -518,15 +509,6 @@ def add_unique_psaps():
     
     # Complete the append with field mapping and query to create county layer
     arcpy.management.Append("county_lyr", unique_county_temp, "NO_TEST", field_mapping=fms, expression=unic_query)
-    
-    
-#    # Erase current county layer with buffer
-#    arcpy.analysis.Erase(unique_county_temp, 'in_memory\\edge_county_buffer', unique_county_erased)
-    
-#    # Append the two erased layers (muni and county) together into one
-#    arcpy.management.Append(unique_county_erased, unique_muni_erased, "NO_TEST")
-    
-    # Append polygon fixes into erased muni layer (now the combo layer)
     
     # Append polygon fixes into the county layer
     # polygon fixes with NULL names are ignored from the solution
