@@ -534,10 +534,7 @@ def add_unique_psaps():
     print("Appending polygon fixes to erased county layer ...")
     arcpy.management.Append(poly_fixes, unique_muni_erased, "NO_TEST", expression=no_nulls)
     
-    
-    
-    
-    
+
     # Erase county layer with poly-fixed muni layer
     arcpy.analysis.Erase(unique_county_temp, unique_muni_erased, unique_county_muni_temp)
     
