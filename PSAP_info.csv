@@ -15,12 +15,11 @@ Key,PSAP,Type,Counties,Munis
 ,Layton City Police Department,single muni,,LAYTON
 ,Logan City Communications Center,single county,CACHE,
 ,Millard County Sheriff's Office,single county,MILLARD,
-,Price Communications Center/State DPS,single county,CARBON,
+,Price Communications Center/State DPS,multi county,"CARBON, SAN JUAN",
 ,Metro Emergency Communications,unique,,"PROVO, OREM, LINDON"
 ,Rich County Sheriff's Office,single county,RICH,
 ,Richfield Communications Center/State DPS,mixed,"SEVIER, PIUTE, WAYNE",ANTIMONY
 ,Salt Lake City 911 Communications Bureau,unique,,"SALT LAKE CITY, SANDY"
-,San Juan County Sheriff's Office,single county,SAN JUAN,
 ,Sanpete County Sheriff's Office,single county,SANPETE,
 ,Springville Public Safety,multi muni,,"SPRINGVILLE, MAPLETON"
 ,St. George Police Department,single county,WASHINGTON,
