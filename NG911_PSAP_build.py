@@ -23,7 +23,7 @@ print("The script start time is {}".format(readable_start))
 
 # Set up databases (SGID must be changed based on user's path)
 SGID = r"C:\Users\eneemann\AppData\Roaming\ESRI\ArcGISPro\Favorites\internal@SGID@internal.agrc.utah.gov.sde"
-ng911_db = r"C:\Users\eneemann\Desktop\Neemann\NG911\NG911_project\NG911_data_updates.gdb"
+ng911_db = r"C:\NG911\NG911_data_updates.gdb"
 
 arcpy.env.workspace = ng911_db
 arcpy.env.overwriteOutput = True
@@ -45,7 +45,7 @@ nested_list = ['Salt Lake Valley Emergency Communications Center', 'Central Utah
 # Read in CSV of PSAP info into pandas dataframe, use df to build dictionaries
 print("Reading in CSV to get PSAP info ...")
 textfile_dir = r'C:\Users\eneemann\Desktop\Python Code\NG911'
-work_dir =r'C:\Users\eneemann\Desktop\Neemann\NG911\NG911_project'
+work_dir =r'C:\NG911'
 
 csv = os.path.join(textfile_dir, 'PSAP_info.csv')
 psap_info = pd.read_csv(csv)
