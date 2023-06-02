@@ -12,9 +12,9 @@ import time
 from datetime import datetime
 import pandas as pd
 
-# Start timer and print start time in UTC
+# Start timer and print start time in local time
 start_time = time.time()
-readable_start = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
+readable_start = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
 print("The script start time is {}".format(readable_start))
 
 ######################
@@ -23,9 +23,6 @@ print("The script start time is {}".format(readable_start))
 
 # Set up databases (SGID must be changed based on user's path)
 SGID = r"C:\Users\eneemann\AppData\Roaming\ESRI\ArcGISPro\Favorites\internal@SGID@internal.agrc.utah.gov.sde"
-# ng911_db = r"\\itwfpcap2\AGRC\agrc\data\ng911\NG911_boundary_work.gdb"
-#ng911_db = r"C:\Users\eneemann\Desktop\Neemann\NG911\NG911_project\NG911_boundary_work_testing.gdb"
-#ng911_db = r"C:\Users\eneemann\Desktop\Neemann\NG911\NG911_project\NG911_project.gdb"
 ng911_db = r"C:\Users\eneemann\Desktop\Neemann\NG911\NG911_project\NG911_data_updates.gdb"
 
 
@@ -43,8 +40,6 @@ law_working = os.path.join(ng911_db, 'NG911_Law_bound_working_' + today)
 
 # Read in text file of municipalities with PDs
 print("Reading in text file to get Municipalities with Police Departments ...")
-#textfile_dir = r'\\itwfpcap2\AGRC\agrc\data\ng911'
-#textfile_dir = r'C:\Users\eneemann\Desktop\Neemann\NG911\NG911_project'
 textfile_dir = r'C:\Users\eneemann\Desktop\Python Code\NG911'
 work_dir =r'C:\Users\eneemann\Desktop\Neemann\NG911\NG911_project'
 filename = os.path.join(textfile_dir, 'Munis_with_PDs.txt')
@@ -61,7 +56,6 @@ print(muni_pd)
 # Read in text file of combo PDs
 combos = {}
 print("Reading in text file for combo Police Departments ...")
-#textfile_dir = r'C:\Users\eneemann\Desktop\Neemann\NG911\NG911_project'
 filename2 = os.path.join(textfile_dir, 'Combo_PDs.txt')
 with open(filename2, 'r') as filehandle:
     combo_temp = [muni.strip() for muni in filehandle.readlines()]
@@ -77,7 +71,6 @@ print(combos)
 # Read in text file of rename PDs
 renames = {}
 print("Reading in text file for renaming Police Departments ...")
-#textfile_dir = r'C:\Users\eneemann\Desktop\Neemann\NG911\NG911_project'
 filename3 = os.path.join(textfile_dir, 'Rename_PDs.txt')
 with open(filename3, 'r') as filehandle:
     rename_temp = [word.strip() for word in filehandle.readlines()]
@@ -92,7 +85,6 @@ print(renames)
 
 # Read in CSV of NGUIDs for Law agencies
 print("Reading in CSV to get NGUIDs ...")
-# textfile_dir = r'C:\Users\eneemann\Desktop\Neemann\NG911\NG911_project'
 csv = os.path.join(textfile_dir, 'law_nguid.csv')
 law_df = pd.read_csv(csv)
 
@@ -431,12 +423,7 @@ project_to_WGS84()
 export_to_shapefile()
 
 print("Script shutting down ...")
-# Stop timer and print end time in UTC
-readable_end = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
+# Stop timer and print end time in local time
+readable_end = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
 print("The script end time is {}".format(readable_end))
 print("Time elapsed: {:.2f}s".format(time.time() - start_time))
-
-#esri_repair = os.path.join(ng911_db, 'a_Law_import_from_shapefile_20220216')
-#arcpy.management.RepairGeometry(esri_repair, 'DELETE_NULL', 'ESRI')
-#ogc_repair = os.path.join(ng911_db, 'a_law_repair_ogc')
-#arcpy.management.RepairGeometry(ogc_repair, 'DELETE_NULL', 'OGC')
